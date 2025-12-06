@@ -7,8 +7,9 @@ Maintainer: David Kim <davidk9@illinois.edu>
 Description: Randomization inference for quantiles of individual treatment
     effects using combined rank sum statistics. Supports both completely
     randomized experiments (CRE) and stratified randomized experiments (SRE).
-    The optimization can be performed using either the open-source HiGHS solver
-    or the commercial Gurobi solver.
+    For SRE, optimization is performed using either the open-source HiGHS
+    solver (recommended, install with install.packages("highs")) or optionally
+    the commercial Gurobi solver (requires separate license and installation).
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
@@ -18,7 +19,6 @@ Imports:
 Suggests:
     testthat (>= 3.0.0),
     highs,
-    gurobi,
     randomizr,
     RItools
 Config/testthat/edition: 3
