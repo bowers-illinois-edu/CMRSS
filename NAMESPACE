@@ -2,3 +2,9 @@
 
 export(comb_p_val_cre)
 export(pval_comb_block)
+export(solve_optimization)
+export(solver_available)
+export(get_default_solver)
+export(parse_opt_method)
+
+importFrom(Matrix,sparseMatrix)
