@@ -1,11 +1,15 @@
 # Combining Multiple Rank Sum Statistics
 
+<!-- badges: start -->
+[![R-CMD-check](https://github.com/jwbowers/CMRSS/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/jwbowers/CMRSS/actions/workflows/R-CMD-check.yaml)
+<!-- badges: end -->
+
 > R package for conducting randomization inference for quantiles of individual treatment effects, using combined rank sum statistics, both for completely randomized and stratified randomized experiments
 
 ## Installation
 
 ```r
-devtools::install_github("davidk91919/CMRSS")
+devtools::install_github("jwbowers/CMRSS")
 ```
 
 ### Solver Dependencies
