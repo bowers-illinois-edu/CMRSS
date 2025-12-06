@@ -18,5 +18,7 @@ Imports:
 Suggests:
     testthat (>= 3.0.0),
     highs,
-    gurobi
+    gurobi,
+    randomizr,
+    RItools
 Config/testthat/edition: 3
