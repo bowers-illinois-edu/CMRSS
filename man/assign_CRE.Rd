@@ -2,12 +2,22 @@
 % Please edit documentation in R/CMRSS_CRE.R
 \name{assign_CRE}
 \alias{assign_CRE}
-\title{Generate matrix of complete randomization assignments
-output: a matrix with nperm columns, each column gives one assignment}
+\title{Generate complete randomization assignments}
 \usage{
 assign_CRE(n, m, nperm)
 }
-\description{
-Generate matrix of complete randomization assignments
-output: a matrix with nperm columns, each column gives one assignment
+\arguments{
+\item{n}{Total number of units.}
+
+\item{m}{Number of treated units.}
+
+\item{nperm}{Number of permutations. If Inf, generates all possible assignments.}
 }
+\value{
+An n x nperm matrix where each column is a permuted treatment assignment.
+}
+\description{
+Generates a matrix of permuted treatment assignments for completely
+randomized experiments.
+}
+\keyword{internal}

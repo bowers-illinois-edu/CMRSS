@@ -9,12 +9,12 @@ parse_opt_method(opt.method)
 \arguments{
 \item{opt.method}{Character string specifying optimization method:
 \itemize{
-  \item "ILP_gurobi": Integer linear programming with Gurobi
-  \item "LP_gurobi": Linear programming relaxation with Gurobi
-  \item "ILP_highs": Integer linear programming with HiGHS
-  \item "LP_highs": Linear programming relaxation with HiGHS
-  \item "ILP_auto" or "ILP": Integer linear programming with auto-selected solver
-  \item "LP_auto" or "LP": Linear programming with auto-selected solver
+\item "ILP_gurobi": Integer linear programming with Gurobi
+\item "LP_gurobi": Linear programming relaxation with Gurobi
+\item "ILP_highs": Integer linear programming with HiGHS
+\item "LP_highs": Linear programming relaxation with HiGHS
+\item "ILP_auto" or "ILP": Integer linear programming with auto-selected solver
+\item "LP_auto" or "LP": Linear programming with auto-selected solver
 }}
 }
 \value{
@@ -26,7 +26,7 @@ A list with:
 Parses the opt.method parameter to determine solver and exactness.
 }
 \examples{
-parse_opt_method("ILP_gurobi")
-parse_opt_method("LP_highs")
-parse_opt_method("ILP")
+parse_opt_method("ILP_gurobi")  # list(exact = TRUE, solver = "gurobi")
+parse_opt_method("LP_highs")    # list(exact = FALSE, solver = "highs")
+parse_opt_method("ILP")         # list(exact = TRUE, solver = "auto")
 }

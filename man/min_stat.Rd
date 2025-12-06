@@ -2,12 +2,34 @@
 % Please edit documentation in R/CMRSS_CRE.R
 \name{min_stat}
 \alias{min_stat}
-\title{calculating individual test statistic corresponds to Caughey et al.(2023)
-output: minimum value of the rank sum statistic assuming n-k treated units can have infinite effects}
+\title{Compute minimum test statistic}
 \usage{
 min_stat(Z, Y, k, c, method.list = NULL, score = NULL, ind.sort.treat = NULL)
 }
-\description{
-calculating individual test statistic corresponds to Caughey et al.(2023)
-output: minimum value of the rank sum statistic assuming n-k treated units can have infinite effects
+\arguments{
+\item{Z}{An n-dimensional binary treatment assignment vector.}
+
+\item{Y}{An n-dimensional observed outcome vector.}
+
+\item{k}{Quantile index (between 1 and n).}
+
+\item{c}{Threshold for the null hypothesis.}
+
+\item{method.list}{A list specifying the scoring method.}
+
+\item{score}{Optional pre-computed score vector.}
+
+\item{ind.sort.treat}{Optional pre-computed sorted treatment indices.}
 }
+\value{
+The minimum test statistic value.
+}
+\description{
+Calculates the minimum value of the rank sum statistic under the
+null hypothesis, assuming at most n-k treated units can have effects
+greater than c.
+}
+\references{
+Caughey, D., Dafoe, A., Li, X., & Miratrix, L. (2023).
+}
+\keyword{internal}

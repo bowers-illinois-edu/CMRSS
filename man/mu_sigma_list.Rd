@@ -2,9 +2,7 @@
 % Please edit documentation in R/CMRSS_SRE.R
 \name{mu_sigma_list}
 \alias{mu_sigma_list}
-\title{function for calculating population mean / standard deviation for a single
-rank sum statistics
-XL: I change weight to a vector}
+\title{Compute means and standard deviations for multiple statistics}
 \usage{
 mu_sigma_list(
   Z,
@@ -15,8 +13,25 @@ mu_sigma_list(
   block.sum = NULL
 )
 }
-\description{
-function for calculating population mean / standard deviation for a single
-rank sum statistics
-XL: I change weight to a vector
+\arguments{
+\item{Z}{An n-dimensional binary treatment assignment vector.}
+
+\item{block}{An n-dimensional vector specifying block membership.}
+
+\item{weight}{A B-dimensional vector of block weights.}
+
+\item{methods.list.all}{A list of lists of method specifications.}
+
+\item{scores.list.all}{Optional pre-computed scores.}
+
+\item{block.sum}{Optional pre-computed block summary.}
 }
+\value{
+A list with components \code{mu} and \code{sigma}, each
+an H-dimensional vector for H statistics.
+}
+\description{
+Calculates the mean and standard deviation for multiple weighted
+stratified rank sum statistics.
+}
+\keyword{internal}

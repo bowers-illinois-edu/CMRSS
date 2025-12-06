@@ -2,8 +2,7 @@
 % Please edit documentation in R/CMRSS_SRE.R
 \name{single_weight_strat_rank_sum_stat}
 \alias{single_weight_strat_rank_sum_stat}
-\title{function to calculate single stratified rank sum statistic with weights
-output is a scalar.}
+\title{Compute weighted stratified rank sum statistic}
 \usage{
 single_weight_strat_rank_sum_stat(
   Z,
@@ -15,7 +14,26 @@ single_weight_strat_rank_sum_stat(
   block.sum = NULL
 )
 }
-\description{
-function to calculate single stratified rank sum statistic with weights
-output is a scalar.
+\arguments{
+\item{Z}{An n-dimensional binary treatment assignment vector.}
+
+\item{Y}{An n-dimensional observed outcome vector.}
+
+\item{block}{An n-dimensional vector specifying block membership.}
+
+\item{method.list.all}{A list of method specifications, one per block.}
+
+\item{score.list.all}{Optional pre-computed scores.}
+
+\item{weight}{A B-dimensional vector of block weights.}
+
+\item{block.sum}{Optional pre-computed block summary.}
 }
+\value{
+A scalar test statistic value.
+}
+\description{
+Calculates a single weighted stratified rank sum statistic combining
+block-specific statistics.
+}
+\keyword{internal}

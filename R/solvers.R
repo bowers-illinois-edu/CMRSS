@@ -216,25 +216,27 @@ HiGHS_sol_com <- function(Z, block, weight, coeflists, p, ms_list, exact = TRUE,
   ## x's: [0, 1] for LP, binary for ILP
   ## eta's: [-Inf, Inf]
   ## theta: [-Inf, Inf]
-  L <- c(rep(0, nn), rep(-Inf, H + 1))
-  U <- c(rep(1, nn), rep(Inf, H + 1))
+  lower_bounds <- c(rep(0, nn), rep(-Inf, H + 1))
+  upper_bounds <- c(rep(1, nn), rep(Inf, H + 1))
 
   ## Variable types
+  ## HiGHS uses: "C" = continuous, "I" = integer
+  ## Binary variables are integers with 0-1 bounds
   if (exact) {
-    types <- c(rep("B", nn), rep("C", H + 1))
+    types <- c(rep("I", nn), rep("C", H + 1))
   } else {
     types <- rep("C", n_vars)
   }
 
   ## Solve with HiGHS
   result <- highs::highs_solve(
-    L = L,
-    U = U,
+    L = obj,
+    lower = lower_bounds,
+    upper = upper_bounds,
     A = A,
     lhs = lhs,
     rhs = rhs,
     types = types,
-    objective = obj,
     maximum = FALSE,  # minimize
     control = highs::highs_control(log_to_console = FALSE)
   )

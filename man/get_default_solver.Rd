@@ -14,7 +14,5 @@ Returns the default solver based on availability. Prefers HiGHS if available
 as it's open-source, falls back to Gurobi.
 }
 \examples{
-\dontrun{
 get_default_solver()
-}
 }

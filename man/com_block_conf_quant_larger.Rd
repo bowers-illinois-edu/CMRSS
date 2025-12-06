@@ -2,7 +2,7 @@
 % Please edit documentation in R/CMRSS_SRE.R
 \name{com_block_conf_quant_larger}
 \alias{com_block_conf_quant_larger}
-\title{Simultaneous bound for confidence interval using combined rank sum statistic 
+\title{Simultaneous bound for confidence interval using combined rank sum statistic
 on stratified randomized experiment}
 \usage{
 com_block_conf_quant_larger(
@@ -12,7 +12,7 @@ com_block_conf_quant_larger(
   set = "all",
   methods.list.all = NULL,
   weight.name = "asymp.opt",
-  opt.method = "ILP_gurobi",
+  opt.method = "ILP_auto",
   stat.null = NULL,
   null.max = 10^4,
   tol = 0.01,
@@ -25,28 +25,38 @@ com_block_conf_quant_larger(
 \item{Y}{An \eqn{n} dimensional observed outcome vector.}
 
 \item{block}{An \eqn{n} dimensional vector specifying block of each
-units.}
+unit.}
 
-\item{set}{set of quantiles of interests. If "treat", generate prediction intervals
-for effect quantiles among treated units. If "control", generate prediction intervals
-for effect quantiles among control units. If "all", generate confidence intervals for
-all effect quantiles.}
+\item{set}{Set of quantiles of interest. Options:
+\itemize{
+\item "treat": Prediction intervals for effect quantiles among treated units
+\item "control": Prediction intervals for effect quantiles among control units
+\item "all": Confidence intervals for all effect quantiles
+}}
 
 \item{methods.list.all}{A list of lists of lists. Corresponds to the
-.  method for each stratum for each different stratified rank sum 
-.  statistic.}
+method for each stratum for each different stratified rank sum
+statistic.}
 
 \item{weight.name}{Weighting method to be implemented. If
-"asymp.opt", asymptotically optimal scheme under a class of local 
-alternatives is adjusted, if "dist.free", design-free scheme is 
+"asymp.opt", asymptotically optimal scheme under a class of local
+alternatives is adjusted, if "dist.free", design-free scheme is
 adjusted.}
 
-\item{opt.method}{Optimization method. If "ILP_gurobi", implement
-integer linear programming. If "LP_gurobi", implement relaxed
-linear programming.}
+\item{opt.method}{Optimization method. Options include:
+\itemize{
+\item "ILP_gurobi": Integer linear programming with Gurobi solver
+\item "LP_gurobi": Linear programming relaxation with Gurobi solver
+\item "ILP_highs": Integer linear programming with HiGHS solver (open-source)
+\item "LP_highs": Linear programming relaxation with HiGHS solver
+\item "ILP" or "ILP_auto": Integer LP with auto-selected solver
+\item "LP" or "LP_auto": Linear programming with auto-selected solver
+}
+HiGHS is recommended for users without a Gurobi license. Both solvers
+produce equivalent results.}
 
 \item{stat.null}{An vector whose empirical distribution
-approximates the randomization distribution of the combined 
+approximates the randomization distribution of the combined
 stratified rank sum statistic.}
 
 \item{null.max}{A positive integer representing the number of
@@ -59,19 +69,25 @@ then the confidence limits are precise up to 3 digits.}
 
 \item{alpha}{A numerical object, where 1-alpha indicates the
 confidence level.}
-
-\item{k}{An integer between 1 and n specifying which quantile of
-individual effect is of interest.}
-
-\item{c}{A numerical object specifying the threshold for the null
-hypothesis.}
 }
 \value{
 A vector specifying lower limits of prediction (confidence) intervals for
 quantiles k = 1 ~ m (or n - m, or n).
 }
 \description{
-null hypothesis H0: \eqn{\tau_{(k)} \leq c}, or \eqn{H0: \tau_{(k)} \geq c}, or
-\eqn{H0: \tau_{(k)} = c}, where \eqn{\tau_{(k)}} denotes individual
-treatment effect at rank k.
+Computes simultaneous confidence intervals for quantiles of individual
+treatment effects in stratified randomized experiments.
+}
+\examples{
+\dontrun{
+# Using HiGHS solver (open-source)
+ci <- com_block_conf_quant_larger(Z, Y, block, set = "treat",
+                                  methods.list.all = methods.list.all,
+                                  opt.method = "ILP_highs")
+
+# Using Gurobi solver
+ci <- com_block_conf_quant_larger(Z, Y, block, set = "all",
+                                  methods.list.all = methods.list.all,
+                                  opt.method = "ILP_gurobi")
+}
 }

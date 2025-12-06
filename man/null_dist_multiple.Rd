@@ -2,12 +2,26 @@
 % Please edit documentation in R/CMRSS_CRE.R
 \name{null_dist_multiple}
 \alias{null_dist_multiple}
-\title{null distribution of multiple rank sum statistics
-output: matrix of null distributions from multiple rank statistics}
+\title{Generate null distributions for multiple rank sum statistics}
 \usage{
 null_dist_multiple(n, m, methods.list = NULL, nperm = 10^5, Z.perm = NULL)
 }
-\description{
-null distribution of multiple rank sum statistics
-output: matrix of null distributions from multiple rank statistics
+\arguments{
+\item{n}{Total number of units.}
+
+\item{m}{Number of treated units.}
+
+\item{methods.list}{A list of method specifications.}
+
+\item{nperm}{Number of permutations.}
+
+\item{Z.perm}{Optional pre-computed permutation matrix.}
 }
+\value{
+An H x nperm matrix where H is the number of statistics.
+}
+\description{
+Computes the randomization null distribution for multiple rank sum
+statistics simultaneously under complete randomization.
+}
+\keyword{internal}

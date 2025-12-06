@@ -2,8 +2,7 @@
 % Please edit documentation in R/CMRSS_SRE.R
 \name{com_null_dist_block}
 \alias{com_null_dist_block}
-\title{generating null distribution of maximum among 
-(1) weighted, (2) normalized multiple stratified rank sum statistic}
+\title{Generate null distribution of combined stratified statistics}
 \usage{
 com_null_dist_block(
   Z,
@@ -16,6 +15,28 @@ com_null_dist_block(
   Z.perm = NULL
 )
 }
-\description{
-output is a vector approximating distribution of null distribution of maximum among test statistics.
+\arguments{
+\item{Z}{An n-dimensional binary treatment assignment vector.}
+
+\item{block}{An n-dimensional vector specifying block membership.}
+
+\item{methods.list.all}{A list of lists of method specifications.}
+
+\item{scores.list.all}{Optional pre-computed scores.}
+
+\item{null.max}{Number of permutations.}
+
+\item{weight}{A B-dimensional vector of block weights.}
+
+\item{block.sum}{Optional pre-computed block summary.}
+
+\item{Z.perm}{Optional pre-computed permutation matrix.}
 }
+\value{
+A numeric vector of the null distribution (length null.max).
+}
+\description{
+Generates the randomization null distribution of the maximum among
+weighted and normalized stratified rank sum statistics.
+}
+\keyword{internal}

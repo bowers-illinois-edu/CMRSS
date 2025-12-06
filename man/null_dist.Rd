@@ -2,12 +2,28 @@
 % Please edit documentation in R/CMRSS_CRE.R
 \name{null_dist}
 \alias{null_dist}
-\title{generating randomization null distribution of a single rank sum statistic
-output: null dist of a single rank score statistics under the CRE}
+\title{Generate null distribution for rank sum statistic}
 \usage{
 null_dist(n, m, method.list = NULL, score = NULL, nperm = 10^5, Z.perm = NULL)
 }
-\description{
-generating randomization null distribution of a single rank sum statistic
-output: null dist of a single rank score statistics under the CRE
+\arguments{
+\item{n}{Total number of units.}
+
+\item{m}{Number of treated units.}
+
+\item{method.list}{A list specifying the scoring method.}
+
+\item{score}{Optional pre-computed score vector.}
+
+\item{nperm}{Number of permutations.}
+
+\item{Z.perm}{Optional pre-computed permutation matrix.}
 }
+\value{
+A numeric vector of length nperm containing the null distribution.
+}
+\description{
+Computes the randomization null distribution of a single rank sum
+statistic under complete randomization.
+}
+\keyword{internal}

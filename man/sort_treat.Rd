@@ -2,10 +2,20 @@
 % Please edit documentation in R/CMRSS_CRE.R
 \name{sort_treat}
 \alias{sort_treat}
-\title{sorting index among treated units, according to ranks of the outcome}
+\title{Sort treated units by outcome rank}
 \usage{
 sort_treat(Y, Z)
 }
-\description{
-output: indices of treated units with increasing outcomes
+\arguments{
+\item{Y}{An n-dimensional observed outcome vector.}
+
+\item{Z}{An n-dimensional binary treatment assignment vector.}
 }
+\value{
+Integer vector of indices of treated units, sorted by increasing outcome.
+}
+\description{
+Returns the indices of treated units sorted by their outcome values
+in increasing order.
+}
+\keyword{internal}

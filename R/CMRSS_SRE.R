@@ -1,7 +1,21 @@
-
-#' function giving summary of the block
-#' 
-#' output is summary of the given SRE 
+#' Summarize block structure
+#'
+#' Computes summary statistics for a stratified randomized experiment,
+#' including the number of blocks, units per block, and treated units per block.
+#'
+#' @param Z An n-dimensional binary treatment assignment vector.
+#' @param block An n-dimensional vector or factor specifying block membership.
+#'
+#' @return A list with components:
+#'   \item{block}{The block factor}
+#'   \item{B}{Number of blocks}
+#'   \item{nb}{Vector of block sizes}
+#'   \item{mb}{Vector of treated units per block}
+#'   \item{mb_ctrl}{Vector of control units per block}
+#'   \item{units.block}{List of unit indices per block}
+#'   \item{block.levels}{Levels of the block factor}
+#'
+#' @keywords internal
 summary_block <- function(Z, block){
   # number of blocks
   if(!is.factor(block)){
@@ -26,9 +40,17 @@ summary_block <- function(Z, block){
   return(result)
 }
 
-#' function assigning treatment assignment for given summary of SRE
-#' 
-#' output n-length treatment assignment vector regarding SRE. 
+#' Generate block-randomized treatment assignments
+#'
+#' Generates permuted treatment assignments that respect the block structure
+#' of a stratified randomized experiment.
+#'
+#' @param block.sum A block summary object from \code{summary_block}.
+#' @param null.max Number of permutations to generate.
+#'
+#' @return An n x null.max matrix of permuted treatment assignments.
+#'
+#' @keywords internal
 assign_block <- function(block.sum, null.max = 10^4){
   block = block.sum$block
   B = block.sum$B
@@ -52,9 +74,18 @@ assign_block <- function(block.sum, null.max = 10^4){
   return(Z.perm)
 }
 
-#' giving the weight under given scheme
-#' 
-#' output is a vector of giving weight for prespecified option of weights.
+#' Compute block weights
+#'
+#' Computes weights for combining block-specific statistics according
+#' to a specified weighting scheme.
+#'
+#' @param block.sum A block summary object from \code{summary_block}.
+#' @param weight.name Weighting scheme: "asymp.opt" for asymptotically optimal
+#'   weights, or "dis.free" for distribution-free weights.
+#'
+#' @return A B-dimensional vector of block weights.
+#'
+#' @keywords internal
 weight_scheme <- function(block.sum, weight.name = "asymp.opt"){
   B = block.sum$B
   nb = block.sum$nb
@@ -73,10 +104,16 @@ weight_scheme <- function(block.sum, weight.name = "asymp.opt"){
   return(weight)
 }
 
-#' score for each of the blocks under a given method.list.all
-#' 
-#' output is a list of score output for each blocks, when a method.list.all is given.
-#' method.list.all is a list of lists
+#' Compute scores for all blocks
+#'
+#' Computes rank scores for each block according to block-specific methods.
+#'
+#' @param nb Vector of block sizes.
+#' @param method.list.all A list of method specifications, one per block.
+#'
+#' @return A list of score vectors, one per block.
+#'
+#' @keywords internal
 score_all_blocks <- function(nb, method.list.all){
   B = length(method.list.all)
   score.list.all = list()
@@ -89,9 +126,22 @@ score_all_blocks <- function(nb, method.list.all){
 }
 
 
-#' function to calculate single stratified rank sum statistic with weights
-#' output is a scalar.
-
+#' Compute weighted stratified rank sum statistic
+#'
+#' Calculates a single weighted stratified rank sum statistic combining
+#' block-specific statistics.
+#'
+#' @param Z An n-dimensional binary treatment assignment vector.
+#' @param Y An n-dimensional observed outcome vector.
+#' @param block An n-dimensional vector specifying block membership.
+#' @param method.list.all A list of method specifications, one per block.
+#' @param score.list.all Optional pre-computed scores.
+#' @param weight A B-dimensional vector of block weights.
+#' @param block.sum Optional pre-computed block summary.
+#'
+#' @return A scalar test statistic value.
+#'
+#' @keywords internal
 single_weight_strat_rank_sum_stat <- function(Z, Y, block, method.list.all, score.list.all = NULL, weight, block.sum = NULL){
   
   if(is.null(block.sum)){
@@ -123,11 +173,21 @@ single_weight_strat_rank_sum_stat <- function(Z, Y, block, method.list.all, scor
   return(result)
 }
 
-#' function calculating mean and standard deviation
-#' of each individual stratified rank sum statistic
-#' 
-#' output is a list of mean and standard deviations of each rank sum statistic
-
+#' Compute mean and standard deviation of stratified statistic
+#'
+#' Calculates the mean and standard deviation of a weighted stratified
+#' rank sum statistic under the null hypothesis.
+#'
+#' @param Z An n-dimensional binary treatment assignment vector.
+#' @param block An n-dimensional vector specifying block membership.
+#' @param method.list.all A list of method specifications, one per block.
+#' @param score.list.all Optional pre-computed scores.
+#' @param weight A B-dimensional vector of block weights.
+#' @param block.sum Optional pre-computed block summary.
+#'
+#' @return A list with components \code{mu} (mean) and \code{sigma} (standard deviation).
+#'
+#' @keywords internal
 mu_sigma_single_weight_strat_rank_sum_stat <- function(Z, block,
                                                        method.list.all,
                                                        score.list.all = NULL,
@@ -171,10 +231,23 @@ mu_sigma_single_weight_strat_rank_sum_stat <- function(Z, block,
 }
 
 
-#' generating null distribution of maximum among 
-#' (1) weighted, (2) normalized multiple stratified rank sum statistic
-#' 
-#' output is a vector approximating distribution of null distribution of maximum among test statistics.
+#' Generate null distribution of combined stratified statistics
+#'
+#' Generates the randomization null distribution of the maximum among
+#' weighted and normalized stratified rank sum statistics.
+#'
+#' @param Z An n-dimensional binary treatment assignment vector.
+#' @param block An n-dimensional vector specifying block membership.
+#' @param methods.list.all A list of lists of method specifications.
+#' @param scores.list.all Optional pre-computed scores.
+#' @param null.max Number of permutations.
+#' @param weight A B-dimensional vector of block weights.
+#' @param block.sum Optional pre-computed block summary.
+#' @param Z.perm Optional pre-computed permutation matrix.
+#'
+#' @return A numeric vector of the null distribution (length null.max).
+#'
+#' @keywords internal
 com_null_dist_block <- function(Z, block,
                                 methods.list.all,
                                 scores.list.all = NULL,
@@ -243,10 +316,22 @@ com_null_dist_block <- function(Z, block,
 }
 
 
-#' function for calculating population mean / standard deviation for a single
-#' rank sum statistics
-#' XL: I change weight to a vector
-
+#' Compute means and standard deviations for multiple statistics
+#'
+#' Calculates the mean and standard deviation for multiple weighted
+#' stratified rank sum statistics.
+#'
+#' @param Z An n-dimensional binary treatment assignment vector.
+#' @param block An n-dimensional vector specifying block membership.
+#' @param weight A B-dimensional vector of block weights.
+#' @param methods.list.all A list of lists of method specifications.
+#' @param scores.list.all Optional pre-computed scores.
+#' @param block.sum Optional pre-computed block summary.
+#'
+#' @return A list with components \code{mu} and \code{sigma}, each
+#'   an H-dimensional vector for H statistics.
+#'
+#' @keywords internal
 mu_sigma_list = function(Z, block, weight, methods.list.all, scores.list.all = NULL, block.sum = NULL){
   if(is.null(block.sum)){
     block.sum = summary_block(Z, block)
@@ -285,13 +370,24 @@ mu_sigma_list = function(Z, block, weight, methods.list.all, scores.list.all = N
 
 
 
-#' calculating score values for given multiple stratified rank sum statistics
-#' 
-#' output is a list with H elements, 
-#' each of the H elements is also a list of length B, 
-#' which is a 2*(1+mb) matrix containing the minimum value of the block-specific 
-#' test statistic given 0:mb numbers of units with effects greater than c
-
+#' Compute coefficient matrices for optimization
+#'
+#' Calculates the coefficient matrices needed for the optimization problem
+#' in the combined stratified rank sum test.
+#'
+#' @param Z An n-dimensional binary treatment assignment vector.
+#' @param Y An n-dimensional observed outcome vector.
+#' @param block An n-dimensional vector specifying block membership.
+#' @param c Threshold for the null hypothesis.
+#' @param methods.list.all A list of lists of method specifications.
+#' @param scores.list.all Optional pre-computed scores.
+#' @param block.sum Optional pre-computed block summary.
+#'
+#' @return A list with H elements, each containing a list of B matrices.
+#'   Each matrix is 2 x (mb+1) containing the number of units and minimum
+#'   statistic values for different coverage scenarios.
+#'
+#' @keywords internal
 comb_matrix_block <- function(Z, Y, block, c, methods.list.all, scores.list.all = NULL, block.sum = NULL){
   if(is.null(block.sum)){
     block.sum = summary_block(Z, block)

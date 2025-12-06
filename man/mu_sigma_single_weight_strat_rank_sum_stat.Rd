@@ -2,8 +2,7 @@
 % Please edit documentation in R/CMRSS_SRE.R
 \name{mu_sigma_single_weight_strat_rank_sum_stat}
 \alias{mu_sigma_single_weight_strat_rank_sum_stat}
-\title{function calculating mean and standard deviation
-of each individual stratified rank sum statistic}
+\title{Compute mean and standard deviation of stratified statistic}
 \usage{
 mu_sigma_single_weight_strat_rank_sum_stat(
   Z,
@@ -14,6 +13,24 @@ mu_sigma_single_weight_strat_rank_sum_stat(
   block.sum = NULL
 )
 }
-\description{
-output is a list of mean and standard deviations of each rank sum statistic
+\arguments{
+\item{Z}{An n-dimensional binary treatment assignment vector.}
+
+\item{block}{An n-dimensional vector specifying block membership.}
+
+\item{method.list.all}{A list of method specifications, one per block.}
+
+\item{score.list.all}{Optional pre-computed scores.}
+
+\item{weight}{A B-dimensional vector of block weights.}
+
+\item{block.sum}{Optional pre-computed block summary.}
 }
+\value{
+A list with components \code{mu} (mean) and \code{sigma} (standard deviation).
+}
+\description{
+Calculates the mean and standard deviation of a weighted stratified
+rank sum statistic under the null hypothesis.
+}
+\keyword{internal}

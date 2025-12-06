@@ -2,11 +2,19 @@
 % Please edit documentation in R/CMRSS_SRE.R
 \name{score_all_blocks}
 \alias{score_all_blocks}
-\title{score for each of the blocks under a given method.list.all}
+\title{Compute scores for all blocks}
 \usage{
 score_all_blocks(nb, method.list.all)
 }
-\description{
-output is a list of score output for each blocks, when a method.list.all is given.
-method.list.all is a list of lists
+\arguments{
+\item{nb}{Vector of block sizes.}
+
+\item{method.list.all}{A list of method specifications, one per block.}
 }
+\value{
+A list of score vectors, one per block.
+}
+\description{
+Computes rank scores for each block according to block-specific methods.
+}
+\keyword{internal}

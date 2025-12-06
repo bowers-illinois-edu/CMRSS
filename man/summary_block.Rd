@@ -2,10 +2,27 @@
 % Please edit documentation in R/CMRSS_SRE.R
 \name{summary_block}
 \alias{summary_block}
-\title{function giving summary of the block}
+\title{Summarize block structure}
 \usage{
 summary_block(Z, block)
 }
-\description{
-output is summary of the given SRE
+\arguments{
+\item{Z}{An n-dimensional binary treatment assignment vector.}
+
+\item{block}{An n-dimensional vector or factor specifying block membership.}
 }
+\value{
+A list with components:
+\item{block}{The block factor}
+\item{B}{Number of blocks}
+\item{nb}{Vector of block sizes}
+\item{mb}{Vector of treated units per block}
+\item{mb_ctrl}{Vector of control units per block}
+\item{units.block}{List of unit indices per block}
+\item{block.levels}{Levels of the block factor}
+}
+\description{
+Computes summary statistics for a stratified randomized experiment,
+including the number of blocks, units per block, and treated units per block.
+}
+\keyword{internal}

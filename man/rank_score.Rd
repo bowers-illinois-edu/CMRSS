@@ -2,17 +2,35 @@
 % Please edit documentation in R/CMRSS_CRE.R
 \name{rank_score}
 \alias{rank_score}
-\title{Calculating score for given n
-included polynomial rank score with Puri(1965)'s normalization (denoted by std)
-output: rank scores of length n}
+\title{Calculate rank scores}
 \usage{
 rank_score(
   n,
   method.list = list(name = "Polynomial", r, std = TRUE, scale = FALSE)
 )
 }
-\description{
-Calculating score for given n
-included polynomial rank score with Puri(1965)'s normalization (denoted by std)
-output: rank scores of length n
+\arguments{
+\item{n}{Number of units.}
+
+\item{method.list}{A list specifying the scoring method:
+\itemize{
+\item \code{name}: "Wilcoxon", "Stephenson", or "Polynomial"
+\item \code{s}: (for Stephenson) the parameter s
+\item \code{r}: (for Polynomial) the power parameter
+\item \code{std}: (for Polynomial) logical, use Puri(1965) normalization
+\item \code{scale}: logical, standardize scores to mean 0 and sd 1
+}}
 }
+\value{
+A numeric vector of length n containing the rank scores.
+}
+\description{
+Computes rank scores for rank-based test statistics. Supports Wilcoxon,
+Stephenson, and Polynomial rank scores.
+}
+\details{
+Wilcoxon scores are normalized to the 0-1 range by dividing by max.
+Stephenson scores use binomial coefficients and are also normalized.
+Polynomial scores optionally use Puri(1965) normalization.
+}
+\keyword{internal}

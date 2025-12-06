@@ -4,8 +4,6 @@
 ## see https://testthat.r-lib.org/
 library("testthat")
 
-context("CMRSS Functions")
-
 test_that("xBal univariate descriptive means agree w/ lm", {
 
   # Skip if RItools is not available
@@ -21,8 +19,9 @@ test_that("xBal univariate descriptive means agree w/ lm", {
   xb1 <- RItools::xBalance(z ~ x1, strata = list(`Unstrat` = NULL, s = ~s),
                             data = dat, report = c("adj.mean.diffs"))
   expect_equal(xb1$results["x1", "adj.diff", "Unstrat"], coef(lm1)["z"],
-               check.attributes = FALSE)
+               ignore_attr = TRUE)
 
   lm2a <- lm(x1 ~ z + s, data = dat)
-  expect_equivalent(xb1$results["x1", "adj.diff", "s"], coef(lm2a)[["z"]])
+  expect_equal(xb1$results["x1", "adj.diff", "s"], coef(lm2a)[["z"]],
+               ignore_attr = TRUE)
 })

@@ -16,7 +16,7 @@ pval_comb_block(
   stat.null = NULL,
   null.max = 10^5,
   statistic = TRUE,
-  opt.method = "ILP_gurobi"
+  opt.method = "ILP_auto"
 )
 }
 \arguments{
@@ -34,32 +34,40 @@ hypothesis.}
 units.}
 
 \item{methods.list.all}{A list of lists of lists. Corresponds to the
-.  method for each stratum for each different stratified rank sum 
-.  statistic.}
+method for each stratum for each different stratified rank sum
+statistic.}
 
 \item{weight.name}{Weighting method to be implemented. If
-"asymp.opt", asymptotically optimal scheme under a class of local 
-alternatives is adjusted, if "dist.free", design-free scheme is 
+"asymp.opt", asymptotically optimal scheme under a class of local
+alternatives is adjusted, if "dist.free", design-free scheme is
 adjusted.}
 
 \item{stat.null}{An vector whose empirical distribution
-approximates the randomization distribution of the combined 
+approximates the randomization distribution of the combined
 stratified rank sum statistic.}
 
 \item{null.max}{A positive integer representing the number of
 permutations for approximating the randomization distribution of
 the rank sum statistic.}
 
-\item{statistic}{logical; if TRUE (default), also prints the 
+\item{statistic}{logical; if TRUE (default), also prints the
 combined stratified rank sum statistic.}
 
-\item{opt.method}{Optimization method. If "ILP_gurobi", implement
-integer linear programming. If "LP_gurobi", implement relaxed
-linear programming.}
+\item{opt.method}{Optimization method. Options include:
+\itemize{
+\item "ILP_gurobi": Integer linear programming with Gurobi solver
+\item "LP_gurobi": Linear programming relaxation with Gurobi solver
+\item "ILP_highs": Integer linear programming with HiGHS solver (open-source)
+\item "LP_highs": Linear programming relaxation with HiGHS solver
+\item "ILP" or "ILP_auto": Integer LP with auto-selected solver
+\item "LP" or "LP_auto": Linear programming with auto-selected solver
+}
+HiGHS is recommended for users without a Gurobi license. Both solvers
+produce equivalent results.}
 }
 \value{
 The p-value (and test statistic) for testing the specified
-  null hypothesis of interest.
+null hypothesis of interest.
 }
 \description{
 Obtain the combined stratified rank sum statistic
@@ -67,4 +75,20 @@ and combined p-value for testing the given
 null hypothesis H0: \eqn{\tau_{(k)} \leq c}, or \eqn{H0: \tau_{(k)} \geq c}, or
 \eqn{H0: \tau_{(k)} = c}, where \eqn{\tau_{(k)}} denotes individual
 treatment effect at rank k.
+}
+\examples{
+\dontrun{
+# Using HiGHS solver (open-source, recommended)
+result <- pval_comb_block(Z, Y, k, c, block, methods.list.all,
+                          opt.method = "ILP_highs")
+
+# Using Gurobi solver (requires license)
+result <- pval_comb_block(Z, Y, k, c, block, methods.list.all,
+                          opt.method = "ILP_gurobi")
+
+# Auto-select solver
+result <- pval_comb_block(Z, Y, k, c, block, methods.list.all,
+                          opt.method = "ILP")
+}
+
 }

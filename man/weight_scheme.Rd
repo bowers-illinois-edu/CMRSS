@@ -2,10 +2,21 @@
 % Please edit documentation in R/CMRSS_SRE.R
 \name{weight_scheme}
 \alias{weight_scheme}
-\title{giving the weight under given scheme}
+\title{Compute block weights}
 \usage{
 weight_scheme(block.sum, weight.name = "asymp.opt")
 }
-\description{
-output is a vector of giving weight for prespecified option of weights.
+\arguments{
+\item{block.sum}{A block summary object from \code{summary_block}.}
+
+\item{weight.name}{Weighting scheme: "asymp.opt" for asymptotically optimal
+weights, or "dis.free" for distribution-free weights.}
 }
+\value{
+A B-dimensional vector of block weights.
+}
+\description{
+Computes weights for combining block-specific statistics according
+to a specified weighting scheme.
+}
+\keyword{internal}

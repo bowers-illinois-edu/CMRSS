@@ -2,7 +2,7 @@
 % Please edit documentation in R/CMRSS_SRE.R
 \name{com_block_conf_quant_larger_trt}
 \alias{com_block_conf_quant_larger_trt}
-\title{Helper function for Simultaneous Inference for multiple quantiles on CRE}
+\title{Helper function for Simultaneous Inference for multiple quantiles on SRE}
 \usage{
 com_block_conf_quant_larger_trt(
   Z,
@@ -11,12 +11,59 @@ com_block_conf_quant_larger_trt(
   k.vec = NULL,
   methods.list.all,
   weight.name = "asymp.opt",
-  opt.method = "ILP_gurobi",
+  opt.method = "ILP_auto",
   stat.null = NULL,
   null.max = 10^4,
   tol = 0.01,
   alpha = 0.1
 )
+}
+\arguments{
+\item{Z}{An \eqn{n} dimensional treatment assignment vector.}
+
+\item{Y}{An \eqn{n} dimensional observed outcome vector.}
+
+\item{block}{An \eqn{n} dimensional vector specifying block of each
+units.}
+
+\item{k.vec}{Optional vector of specific quantile indices to compute.
+If NULL, computes for all quantiles.}
+
+\item{methods.list.all}{A list of lists of lists. Corresponds to the
+method for each stratum for each different stratified rank sum
+statistic.}
+
+\item{weight.name}{Weighting method to be implemented. If
+"asymp.opt", asymptotically optimal scheme under a class of local
+alternatives is adjusted, if "dist.free", design-free scheme is
+adjusted.}
+
+\item{opt.method}{Optimization method. Options include:
+\itemize{
+\item "ILP_gurobi": Integer linear programming with Gurobi solver
+\item "LP_gurobi": Linear programming relaxation with Gurobi solver
+\item "ILP_highs": Integer linear programming with HiGHS solver (open-source)
+\item "LP_highs": Linear programming relaxation with HiGHS solver
+\item "ILP" or "ILP_auto": Integer LP with auto-selected solver
+\item "LP" or "LP_auto": Linear programming with auto-selected solver
+}
+HiGHS is recommended for users without a Gurobi license. Both solvers
+produce equivalent results.}
+
+\item{stat.null}{An vector whose empirical distribution
+approximates the randomization distribution of the combined
+stratified rank sum statistic.}
+
+\item{null.max}{A positive integer representing the number of
+permutations for approximating the randomization distribution of
+the rank sum statistic.}
+
+\item{tol}{Tolerance for root-finding algorithm.}
+
+\item{alpha}{Significance level for confidence intervals.}
+}
+\value{
+Vector of lower confidence limits for the specified quantiles.
 }
 \description{
 Output is a lower limit of prediction intervals for prespecified quantiles.

@@ -1,8 +1,14 @@
-
-#' sorting index among treated units, according to ranks of the outcome
+#' Sort treated units by outcome rank
 #'
-#' output: indices of treated units with increasing outcomes
-
+#' Returns the indices of treated units sorted by their outcome values
+#' in increasing order.
+#'
+#' @param Y An n-dimensional observed outcome vector.
+#' @param Z An n-dimensional binary treatment assignment vector.
+#'
+#' @return Integer vector of indices of treated units, sorted by increasing outcome.
+#'
+#' @keywords internal
 sort_treat <- function(Y, Z){
   r = rank(Y, ties.method = "first")
   ind.sort = sort.int(r, index.return = TRUE)$ix
@@ -12,8 +18,18 @@ sort_treat <- function(Y, Z){
 
 
 
-#' Generate matrix of complete randomization assignments
-#' output: a matrix with nperm columns, each column gives one assignment
+#' Generate complete randomization assignments
+#'
+#' Generates a matrix of permuted treatment assignments for completely
+#' randomized experiments.
+#'
+#' @param n Total number of units.
+#' @param m Number of treated units.
+#' @param nperm Number of permutations. If Inf, generates all possible assignments.
+#'
+#' @return An n x nperm matrix where each column is a permuted treatment assignment.
+#'
+#' @keywords internal
 assign_CRE <- function(n, m, nperm){
   if(is.finite(nperm)){
     Z.perm = matrix(0, nrow = n, ncol = nperm)
@@ -36,9 +52,29 @@ assign_CRE <- function(n, m, nperm){
 
 
 
-#' Calculating score for given n
-#' included polynomial rank score with Puri(1965)'s normalization (denoted by std)
-#' output: rank scores of length n
+#' Calculate rank scores
+#'
+#' Computes rank scores for rank-based test statistics. Supports Wilcoxon,
+#' Stephenson, and Polynomial rank scores.
+#'
+#' @param n Number of units.
+#' @param method.list A list specifying the scoring method:
+#'   \itemize{
+#'     \item \code{name}: "Wilcoxon", "Stephenson", or "Polynomial"
+#'     \item \code{s}: (for Stephenson) the parameter s
+#'     \item \code{r}: (for Polynomial) the power parameter
+#'     \item \code{std}: (for Polynomial) logical, use Puri(1965) normalization
+#'     \item \code{scale}: logical, standardize scores to mean 0 and sd 1
+#'   }
+#'
+#' @return A numeric vector of length n containing the rank scores.
+#'
+#' @details
+#' Wilcoxon scores are normalized to the 0-1 range by dividing by max.
+#' Stephenson scores use binomial coefficients and are also normalized.
+#' Polynomial scores optionally use Puri(1965) normalization.
+#'
+#' @keywords internal
 rank_score <- function(n, method.list = list(name = "Polynomial", r, std = TRUE, scale = FALSE) ){
   if(method.list$name == "Polynomial"){
     r = method.list$r
@@ -54,12 +90,14 @@ rank_score <- function(n, method.list = list(name = "Polynomial", r, std = TRUE,
   }
   if(method.list$name == "Stephenson"){
     score = choose( c(1:n) - 1, method.list$s - 1)
+    score = score/max(score)  # normalize by max to match RIQITE
     if(method.list$scale == TRUE){
       score = scale(score)
     }
   }
   if(method.list$name == "Wilcoxon"){
     score = c(1:n)
+    score = score/max(score)  # normalize by max to match RIQITE
     if(method.list$scale == TRUE){
       score = scale(score)
     }
@@ -69,8 +107,21 @@ rank_score <- function(n, method.list = list(name = "Polynomial", r, std = TRUE,
 
 
 
-#' generating randomization null distribution of a single rank sum statistic
-#' output: null dist of a single rank score statistics under the CRE
+#' Generate null distribution for rank sum statistic
+#'
+#' Computes the randomization null distribution of a single rank sum
+#' statistic under complete randomization.
+#'
+#' @param n Total number of units.
+#' @param m Number of treated units.
+#' @param method.list A list specifying the scoring method.
+#' @param score Optional pre-computed score vector.
+#' @param nperm Number of permutations.
+#' @param Z.perm Optional pre-computed permutation matrix.
+#'
+#' @return A numeric vector of length nperm containing the null distribution.
+#'
+#' @keywords internal
 null_dist <- function(n, m, method.list = NULL, score = NULL,
                       nperm = 10^5, Z.perm = NULL){
   if(is.null(score)){
@@ -90,8 +141,20 @@ null_dist <- function(n, m, method.list = NULL, score = NULL,
   return(stat.null)
 }
 
-#' null distribution of multiple rank sum statistics
-#' output: matrix of null distributions from multiple rank statistics
+#' Generate null distributions for multiple rank sum statistics
+#'
+#' Computes the randomization null distribution for multiple rank sum
+#' statistics simultaneously under complete randomization.
+#'
+#' @param n Total number of units.
+#' @param m Number of treated units.
+#' @param methods.list A list of method specifications.
+#' @param nperm Number of permutations.
+#' @param Z.perm Optional pre-computed permutation matrix.
+#'
+#' @return An H x nperm matrix where H is the number of statistics.
+#'
+#' @keywords internal
 null_dist_multiple <- function(n, m, methods.list = NULL, nperm = 10^5, Z.perm = NULL){
   if(is.null(Z.perm)){
     Z.perm = assign_CRE(n, m, nperm)
@@ -109,8 +172,26 @@ null_dist_multiple <- function(n, m, methods.list = NULL, nperm = 10^5, Z.perm =
 
 
 
-#' calculating individual test statistic corresponds to Caughey et al.(2023)
-#' output: minimum value of the rank sum statistic assuming n-k treated units can have infinite effects
+#' Compute minimum test statistic
+#'
+#' Calculates the minimum value of the rank sum statistic under the
+#' null hypothesis, assuming at most n-k treated units can have effects
+#' greater than c.
+#'
+#' @param Z An n-dimensional binary treatment assignment vector.
+#' @param Y An n-dimensional observed outcome vector.
+#' @param k Quantile index (between 1 and n).
+#' @param c Threshold for the null hypothesis.
+#' @param method.list A list specifying the scoring method.
+#' @param score Optional pre-computed score vector.
+#' @param ind.sort.treat Optional pre-computed sorted treatment indices.
+#'
+#' @return The minimum test statistic value.
+#'
+#' @references
+#' Caughey, D., Dafoe, A., Li, X., & Miratrix, L. (2023).
+#'
+#' @keywords internal
 min_stat <- function(Z, Y, k, c, method.list = NULL,
                      score = NULL,
                      ind.sort.treat = NULL){
@@ -226,39 +307,59 @@ min_p_multiple_rank_sum <- function(Z, Y, k, c, methods.list, Z.perm = NULL, npe
 }
 
 
-#' Function for calculating valid minimum p-value in CRE
-#' Calculate a valid p-value, based on multiple random sum statistics,
-#' for testing the null that at most n-k treated units having effects > c,
-#' null hypothesis H0: \eqn{\tau_{(k)} \leq c}, or \eqn{H0: \tau_{(k)} \geq c}, or
-#' \eqn{H0: \tau_{(k)} = c}, where \eqn{\tau_{(k)}} denotes individual
-#' treatment effect at rank k.
+#' Combined p-value for quantile treatment effects in CRE
 #'
-#' @param Z An \eqn{n} dimensional treatment assignment vector.
-#' @param Y An \eqn{n} dimensional outcome vector.
+#' Calculate a valid p-value, based on multiple rank sum statistics,
+#' for testing the null hypothesis about quantiles of individual treatment
+#' effects in completely randomized experiments (CRE).
+#'
+#' @description
+#' Tests the null hypothesis \eqn{H_0: \tau_{(k)} \leq c}, where \eqn{\tau_{(k)}}
+#' denotes the individual treatment effect at rank k. The test combines multiple
+#' rank sum statistics to improve power.
+#'
+#' @param Z An n-dimensional binary treatment assignment vector (1 = treated, 0 = control).
+#' @param Y An n-dimensional observed outcome vector.
 #' @param k An integer between 1 and n specifying which quantile of
 #'   individual effect is of interest.
-#' @param c A numerical object specifying the threshold for the null
-#'   hypothesis.
-#' @param methods.list A list of lists specifies the choice of the multiple
-#'   rank sum test statistics. For example, list(name = "Wilcoxon") means the Wilcoxon
-#'   rank sum statistic, list(name = "Stephenson", s = 10) means
-#'   the Stephenson rank sum statistic with parameter s = 10, and
-#'   list(name = "Polynomial", r = 2, std = TRUE, scale = FALSE) means using polynomial
-#'   rank score with standarizing statistics without scaling.
-#' @param Z.perm A \eqn{n \times nperm} matrix that specifies the
-#'   permutated assignments for approximating the null distribution of
-#'   the test statistic.
-#' @param nperm A positive integer representing the number of
-#'   permutations for approximating the randomization distribution of
-#'   the rank sum statistic.
-#' @param stat.null.mult A matrix whose empiricial distribution
-#'   approxmiates the randomization distribution of multiple rank statistics.
-#' @param null.dist.comb
+#' @param c A numeric value specifying the threshold for the null hypothesis.
+#' @param methods.list A list of method specifications for the rank sum statistics.
+#'   Each element should be a list with:
+#'   \itemize{
+#'     \item \code{name}: "Wilcoxon", "Stephenson", or "Polynomial"
+#'     \item \code{s}: (for Stephenson) parameter s
+#'     \item \code{r}: (for Polynomial) power parameter
+#'     \item \code{std}: (for Polynomial) logical, use Puri normalization
+#'     \item \code{scale}: logical, standardize scores
+#'   }
+#' @param Z.perm An n x nperm matrix of permuted treatment assignments for
+#'   approximating the null distribution. If NULL, generated automatically.
+#' @param nperm Number of permutations for approximating the null distribution.
+#' @param stat.null.mult A matrix whose empirical distribution approximates
+#'   the randomization distribution of multiple rank statistics. If NULL,
+#'   computed from Z.perm.
 #'
-#' @return Combined p-value for testing the specified null hypothesis of
-#'   interest in CRE.
+#' @return A numeric p-value for testing the specified null hypothesis.
+#'
+#' @examples
+#' # Simple example with Wilcoxon and Stephenson statistics
+#' set.seed(123)
+#' n <- 30
+#' Z <- sample(c(rep(1, 15), rep(0, 15)))
+#' Y <- rnorm(n) + 0.5 * Z  # Treatment effect of 0.5
+#'
+#' # Define methods: Wilcoxon and Stephenson with s=3
+#' methods.list <- list(
+#'   list(name = "Wilcoxon", scale = FALSE),
+#'   list(name = "Stephenson", s = 3, scale = FALSE)
+#' )
+#'
+#' # Test if the 80th percentile effect is <= 0
+#' k <- floor(0.8 * n)
+#' pval <- comb_p_val_cre(Z, Y, k, c = 0, methods.list, nperm = 1000)
+#'
+#' @seealso \code{\link{pval_comb_block}} for stratified experiments
 #' @export
-
 comb_p_val_cre = function(Z, Y, k, c, methods.list,
                           Z.perm = NULL, nperm,
                           stat.null.mult = NULL

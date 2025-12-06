@@ -2,10 +2,20 @@
 % Please edit documentation in R/CMRSS_SRE.R
 \name{assign_block}
 \alias{assign_block}
-\title{function assigning treatment assignment for given summary of SRE}
+\title{Generate block-randomized treatment assignments}
 \usage{
 assign_block(block.sum, null.max = 10^4)
 }
-\description{
-output n-length treatment assignment vector regarding SRE.
+\arguments{
+\item{block.sum}{A block summary object from \code{summary_block}.}
+
+\item{null.max}{Number of permutations to generate.}
 }
+\value{
+An n x null.max matrix of permuted treatment assignments.
+}
+\description{
+Generates permuted treatment assignments that respect the block structure
+of a stratified randomized experiment.
+}
+\keyword{internal}

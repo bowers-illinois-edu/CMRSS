@@ -2,12 +2,7 @@
 % Please edit documentation in R/CMRSS_CRE.R
 \name{comb_p_val_cre}
 \alias{comb_p_val_cre}
-\title{Function for calculating valid minimum p-value in CRE
-Calculate a valid p-value, based on multiple random sum statistics,
-for testing the null that at most n-k treated units having effects > c,
-null hypothesis H0: \eqn{\tau_{(k)} \leq c}, or \eqn{H0: \tau_{(k)} \geq c}, or
-\eqn{H0: \tau_{(k)} = c}, where \eqn{\tau_{(k)}} denotes individual
-treatment effect at rank k.}
+\title{Combined p-value for quantile treatment effects in CRE}
 \usage{
 comb_p_val_cre(
   Z,
@@ -21,45 +16,65 @@ comb_p_val_cre(
 )
 }
 \arguments{
-\item{Z}{An \eqn{n} dimensional treatment assignment vector.}
+\item{Z}{An n-dimensional binary treatment assignment vector (1 = treated, 0 = control).}
 
-\item{Y}{An \eqn{n} dimensional outcome vector.}
+\item{Y}{An n-dimensional observed outcome vector.}
 
 \item{k}{An integer between 1 and n specifying which quantile of
 individual effect is of interest.}
 
-\item{c}{A numerical object specifying the threshold for the null
-hypothesis.}
+\item{c}{A numeric value specifying the threshold for the null hypothesis.}
 
-\item{methods.list}{A list of lists specifies the choice of the multiple
-rank sum test statistics. For example, list(name = "Wilcoxon") means the Wilcoxon
-rank sum statistic, list(name = "Stephenson", s = 10) means
-the Stephenson rank sum statistic with parameter s = 10, and
-list(name = "Polynomial", r = 2, std = TRUE, scale = FALSE) means using polynomial
-rank score with standarizing statistics without scaling.}
+\item{methods.list}{A list of method specifications for the rank sum statistics.
+Each element should be a list with:
+\itemize{
+\item \code{name}: "Wilcoxon", "Stephenson", or "Polynomial"
+\item \code{s}: (for Stephenson) parameter s
+\item \code{r}: (for Polynomial) power parameter
+\item \code{std}: (for Polynomial) logical, use Puri normalization
+\item \code{scale}: logical, standardize scores
+}}
 
-\item{Z.perm}{A \eqn{n \times nperm} matrix that specifies the
-permutated assignments for approximating the null distribution of
-the test statistic.}
+\item{Z.perm}{An n x nperm matrix of permuted treatment assignments for
+approximating the null distribution. If NULL, generated automatically.}
 
-\item{nperm}{A positive integer representing the number of
-permutations for approximating the randomization distribution of
-the rank sum statistic.}
+\item{nperm}{Number of permutations for approximating the null distribution.}
 
-\item{stat.null.mult}{A matrix whose empiricial distribution
-approxmiates the randomization distribution of multiple rank statistics.}
-
-\item{null.dist.comb}{}
+\item{stat.null.mult}{A matrix whose empirical distribution approximates
+the randomization distribution of multiple rank statistics. If NULL,
+computed from Z.perm.}
 }
 \value{
-Combined p-value for testing the specified null hypothesis of
-  interest in CRE.
+A numeric p-value for testing the specified null hypothesis.
 }
 \description{
-Function for calculating valid minimum p-value in CRE
-Calculate a valid p-value, based on multiple random sum statistics,
-for testing the null that at most n-k treated units having effects > c,
-null hypothesis H0: \eqn{\tau_{(k)} \leq c}, or \eqn{H0: \tau_{(k)} \geq c}, or
-\eqn{H0: \tau_{(k)} = c}, where \eqn{\tau_{(k)}} denotes individual
-treatment effect at rank k.
+Tests the null hypothesis \eqn{H_0: \tau_{(k)} \leq c}, where \eqn{\tau_{(k)}}
+denotes the individual treatment effect at rank k. The test combines multiple
+rank sum statistics to improve power.
+}
+\details{
+Calculate a valid p-value, based on multiple rank sum statistics,
+for testing the null hypothesis about quantiles of individual treatment
+effects in completely randomized experiments (CRE).
+}
+\examples{
+# Simple example with Wilcoxon and Stephenson statistics
+set.seed(123)
+n <- 30
+Z <- sample(c(rep(1, 15), rep(0, 15)))
+Y <- rnorm(n) + 0.5 * Z  # Treatment effect of 0.5
+
+# Define methods: Wilcoxon and Stephenson with s=3
+methods.list <- list(
+  list(name = "Wilcoxon", scale = FALSE),
+  list(name = "Stephenson", s = 3, scale = FALSE)
+)
+
+# Test if the 80th percentile effect is <= 0
+k <- floor(0.8 * n)
+pval <- comb_p_val_cre(Z, Y, k, c = 0, methods.list, nperm = 1000)
+
+}
+\seealso{
+\code{\link{pval_comb_block}} for stratified experiments
 }

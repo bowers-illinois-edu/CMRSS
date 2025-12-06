@@ -38,9 +38,9 @@ If FALSE, solve as linear program (LP relaxation).}
 
 \item{solver}{Character string specifying the solver to use. Options are:
 \itemize{
-  \item "auto": Automatically select available solver (default)
-  \item "highs": Use HiGHS solver (open-source)
-  \item "gurobi": Use Gurobi solver (commercial, requires license)
+\item "auto": Automatically select available solver (default)
+\item "highs": Use HiGHS solver (open-source)
+\item "gurobi": Use Gurobi solver (commercial, requires license)
 }}
 }
 \value{
@@ -74,6 +74,6 @@ result <- solve_optimization(Z, block, weight, coeflists, p, ms_list, solver = "
 }
 }
 \seealso{
-\code{\link{solver_available}}, \code{\link{get_default_solver}},
-  \code{\link{parse_opt_method}}, \code{\link{pval_comb_block}}
+\code{\link{HiGHS_sol_com}}, \code{\link{Gurobi_sol_com}},
+\code{\link{solver_available}}, \code{\link{get_default_solver}}
 }

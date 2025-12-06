@@ -2,7 +2,7 @@
 % Please edit documentation in R/CMRSS_SRE.R
 \name{comb_matrix_block}
 \alias{comb_matrix_block}
-\title{calculating score values for given multiple stratified rank sum statistics}
+\title{Compute coefficient matrices for optimization}
 \usage{
 comb_matrix_block(
   Z,
@@ -14,9 +14,28 @@ comb_matrix_block(
   block.sum = NULL
 )
 }
-\description{
-output is a list with H elements, 
-each of the H elements is also a list of length B, 
-which is a 2*(1+mb) matrix containing the minimum value of the block-specific 
-test statistic given 0:mb numbers of units with effects greater than c
+\arguments{
+\item{Z}{An n-dimensional binary treatment assignment vector.}
+
+\item{Y}{An n-dimensional observed outcome vector.}
+
+\item{block}{An n-dimensional vector specifying block membership.}
+
+\item{c}{Threshold for the null hypothesis.}
+
+\item{methods.list.all}{A list of lists of method specifications.}
+
+\item{scores.list.all}{Optional pre-computed scores.}
+
+\item{block.sum}{Optional pre-computed block summary.}
 }
+\value{
+A list with H elements, each containing a list of B matrices.
+Each matrix is 2 x (mb+1) containing the number of units and minimum
+statistic values for different coverage scenarios.
+}
+\description{
+Calculates the coefficient matrices needed for the optimization problem
+in the combined stratified rank sum test.
+}
+\keyword{internal}

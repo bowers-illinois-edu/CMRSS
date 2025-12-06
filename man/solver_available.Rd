@@ -2,7 +2,7 @@
 % Please edit documentation in R/solvers.R
 \name{solver_available}
 \alias{solver_available}
-\title{Check if a solver is available}
+\title{Solver Utilities for CMRSS Package}
 \usage{
 solver_available(solver)
 }
@@ -13,7 +13,20 @@ solver_available(solver)
 Logical indicating if the solver is available
 }
 \description{
+The package supports two optimization solvers:
+\itemize{
+\item \strong{Gurobi}: Commercial solver (requires license). Fast and robust.
+\item \strong{HiGHS}: Open-source solver. No license required, good performance.
+}
+
+Both solvers produce equivalent results for the same optimization problem.
+HiGHS is recommended for users without a Gurobi license.
 Check if a solver is available
+}
+\details{
+This file contains optimization solver functions for solving the integer/linear
+programming problems in stratified randomized experiments. It supports both
+Gurobi and HiGHS solvers.
 }
 \examples{
 solver_available("highs")
