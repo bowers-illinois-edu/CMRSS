@@ -1,15 +1,24 @@
 Package: CMRSS
 Type: Package
-Title: What the Package Does (Title Case)
-Version: 0.1.0
+Title: Combining Multiple Rank Sum Statistics
+Version: 0.2.0
 Author: David Kim
 Maintainer: David Kim <davidk9@illinois.edu>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
+Description: Randomization inference for quantiles of individual treatment
+    effects using combined rank sum statistics. Supports both completely
+    randomized experiments (CRE) and stratified randomized experiments (SRE).
+    The optimization can be performed using either the open-source HiGHS solver
+    or the commercial Gurobi solver.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.3.1
-Suggests: 
-    testthat (>= 3.0.0)
+Imports:
+    Matrix
+Suggests:
+    testthat (>= 3.0.0),
+    highs,
+    gurobi,
+    randomizr,
+    RItools
 Config/testthat/edition: 3
