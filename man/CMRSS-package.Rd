@@ -8,4 +8,18 @@
 \description{
 Randomization inference for quantiles of individual treatment effects using combined rank sum statistics. Supports both completely randomized experiments (CRE) and stratified randomized experiments (SRE). The optimization can be performed using either the open-source HiGHS solver or the commercial Gurobi solver.
 }
+\author{
+\strong{Maintainer}: David Kim \email{davidk9@illinois.edu}
+
+Authors:
+\itemize{
+  \item Xinran Li \email{xinranli@uchicago.edu}
+}
+
+Other contributors:
+\itemize{
+  \item Jake Bowers \email{jwbowers@uchicago.edu} [contributor]
+}
+
+}
 \keyword{internal}

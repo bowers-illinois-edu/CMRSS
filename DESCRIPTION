@@ -2,8 +2,6 @@ Package: CMRSS
 Type: Package
 Title: Combining Multiple Rank Sum Statistics
 Version: 0.2.0
-Author: David Kim
-Maintainer: David Kim <davidk9@illinois.edu>
 Description: Randomization inference for quantiles of individual treatment
     effects using combined rank sum statistics. Supports both completely
     randomized experiments (CRE) and stratified randomized experiments (SRE).
@@ -30,3 +28,8 @@ Remotes:
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 Config/testthat/edition: 3
+Authors@R: c(
+    person("David", "Kim", , "davidk9@illinois.edu", role = c("aut", "cre")),
+    person("Xinran", "Li", , "xinranli@uchicago.edu", role = "aut"),
+    person("Jake", "Bowers", , "jwbowers@uchicago.edu", role = "ctb")
+  )
