@@ -27,7 +27,12 @@ mu_sigma_single_weight_strat_rank_sum_stat(
 \item{block.sum}{Optional pre-computed block summary.}
 }
 \value{
-A list with components \code{mu} (mean) and \code{sigma} (standard deviation).
+A list with components:
+\item{mu}{Overall weighted mean}
+\item{sigma}{Overall weighted standard deviation}
+\item{mu_weight}{Block-wise weighted means (mean_block * weight)}
+\item{mu_block}{Block-wise unweighted means}
+\item{sd_block}{Block-wise weighted standard deviations}
 }
 \description{
 Calculates the mean and standard deviation of a weighted stratified

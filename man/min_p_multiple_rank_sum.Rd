@@ -2,8 +2,7 @@
 % Please edit documentation in R/CMRSS_CRE.R
 \name{min_p_multiple_rank_sum}
 \alias{min_p_multiple_rank_sum}
-\title{calculate the minimum p value from multiple rank sum statistics
-output: minimum of p values calibrated by the distribution of minimum of tail probabilities}
+\title{Calculate minimum p-value from multiple rank sum statistics}
 \usage{
 min_p_multiple_rank_sum(
   Z,
@@ -16,7 +15,28 @@ min_p_multiple_rank_sum(
   stat.null.mult = NULL
 )
 }
-\description{
-calculate the minimum p value from multiple rank sum statistics
-output: minimum of p values calibrated by the distribution of minimum of tail probabilities
+\arguments{
+\item{Z}{An n-dimensional binary treatment assignment vector.}
+
+\item{Y}{An n-dimensional observed outcome vector.}
+
+\item{k}{Quantile index for the hypothesis.}
+
+\item{c}{Threshold for the null hypothesis.}
+
+\item{methods.list}{A list of method specifications.}
+
+\item{Z.perm}{Optional permutation matrix.}
+
+\item{nperm}{Number of permutations for null distribution.}
+
+\item{stat.null.mult}{Optional pre-computed null distribution matrix.}
 }
+\value{
+A numeric minimum p-value.
+}
+\description{
+Computes the minimum of p-values calibrated by the distribution of minimum
+of tail probabilities.
+}
+\keyword{internal}

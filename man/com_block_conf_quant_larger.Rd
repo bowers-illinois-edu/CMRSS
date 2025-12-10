@@ -13,6 +13,7 @@ com_block_conf_quant_larger(
   methods.list.all = NULL,
   weight.name = "asymp.opt",
   opt.method = "ILP_auto",
+  comb.method = 1,
   stat.null = NULL,
   null.max = 10^4,
   tol = 0.01,
@@ -55,6 +56,12 @@ adjusted.}
 HiGHS is recommended for users without a Gurobi license. Both solvers
 produce equivalent results.}
 
+\item{comb.method}{Integer specifying the combination method:
+\itemize{
+\item 1: Combine statistics across strata first, then take maximum across methods (default)
+\item 2: Take maximum across methods within each stratum first, then combine across strata
+}}
+
 \item{stat.null}{An vector whose empirical distribution
 approximates the randomization distribution of the combined
 stratified rank sum statistic.}
@@ -80,14 +87,69 @@ treatment effects in stratified randomized experiments.
 }
 \examples{
 \dontrun{
-# Using HiGHS solver (open-source)
-ci <- com_block_conf_quant_larger(Z, Y, block, set = "treat",
-                                  methods.list.all = methods.list.all,
-                                  opt.method = "ILP_highs")
+# Load the electric teachers dataset
+data(electric_teachers)
 
-# Using Gurobi solver
-ci <- com_block_conf_quant_larger(Z, Y, block, set = "all",
-                                  methods.list.all = methods.list.all,
-                                  opt.method = "ILP_gurobi")
+# Set up treatment, outcome, and blocking variable
+Z <- electric_teachers$TxAny
+Y <- electric_teachers$gain
+block <- factor(electric_teachers$Site)
+s <- length(levels(block))  # number of strata (7 sites)
+
+# Define polynomial rank statistics with different r values
+# For SRE, methods must be specified for EACH stratum within EACH statistic
+r.vec <- c(2, 6, 10)
+methods.list.all <- list()
+for (j in seq_along(r.vec)) {
+  methods.list.all[[j]] <- lapply(1:s, function(i) {
+    list(name = "Polynomial", r = r.vec[j], std = TRUE, scale = FALSE)
+  })
 }
+
+# Prediction intervals for effect quantiles among treated units
+# Uses asymptotically optimal weighting across strata
+ci.treat <- com_block_conf_quant_larger(Z, Y, block,
+                                        set = "treat",
+                                        methods.list.all = methods.list.all,
+                                        weight.name = "asymp.opt",
+                                        opt.method = "ILP",
+                                        null.max = 10000,
+                                        tol = 0.01,
+                                        alpha = 0.05)
+
+# Prediction intervals for control units
+ci.control <- com_block_conf_quant_larger(Z, Y, block,
+                                          set = "control",
+                                          methods.list.all = methods.list.all,
+                                          opt.method = "ILP",
+                                          alpha = 0.05)
+
+# Confidence intervals for all effect quantiles
+ci.all <- com_block_conf_quant_larger(Z, Y, block,
+                                      set = "all",
+                                      methods.list.all = methods.list.all,
+                                      opt.method = "ILP",
+                                      alpha = 0.10)
+
+# Using stratum-level combination (comb.method = 2)
+# Takes maximum across methods within each stratum first
+ci.treat.m2 <- com_block_conf_quant_larger(Z, Y, block,
+                                           set = "treat",
+                                           methods.list.all = methods.list.all,
+                                           opt.method = "ILP",
+                                           comb.method = 2,
+                                           alpha = 0.05)
+
+# Using LP relaxation for faster computation
+ci.treat.lp <- com_block_conf_quant_larger(Z, Y, block,
+                                           set = "treat",
+                                           methods.list.all = methods.list.all,
+                                           opt.method = "LP",
+                                           alpha = 0.05)
+}
+
+}
+\seealso{
+\code{\link{com_conf_quant_larger_cre}} for completely randomized experiments,
+\code{\link{pval_comb_block}} for hypothesis testing
 }

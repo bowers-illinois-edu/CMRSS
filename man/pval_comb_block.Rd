@@ -16,7 +16,8 @@ pval_comb_block(
   stat.null = NULL,
   null.max = 10^5,
   statistic = TRUE,
-  opt.method = "ILP_auto"
+  opt.method = "ILP_auto",
+  comb.method = 1
 )
 }
 \arguments{
@@ -64,6 +65,12 @@ combined stratified rank sum statistic.}
 }
 HiGHS is recommended for users without a Gurobi license. Both solvers
 produce equivalent results.}
+
+\item{comb.method}{Integer specifying the combination method:
+\itemize{
+\item 1: Combine statistics across strata first, then take maximum across methods (default)
+\item 2: Take maximum across methods within each stratum first, then combine across strata
+}}
 }
 \value{
 The p-value (and test statistic) for testing the specified
@@ -78,17 +85,39 @@ treatment effect at rank k.
 }
 \examples{
 \dontrun{
-# Using HiGHS solver (open-source, recommended)
-result <- pval_comb_block(Z, Y, k, c, block, methods.list.all,
-                          opt.method = "ILP_highs")
+# Load the electric teachers dataset
+data(electric_teachers)
 
-# Using Gurobi solver (requires license)
-result <- pval_comb_block(Z, Y, k, c, block, methods.list.all,
-                          opt.method = "ILP_gurobi")
+# Set up treatment, outcome, and blocking variable
+Z <- electric_teachers$TxAny
+Y <- electric_teachers$gain
+block <- factor(electric_teachers$Site)
+n <- length(Y)
+s <- length(levels(block))  # number of strata
 
-# Auto-select solver
-result <- pval_comb_block(Z, Y, k, c, block, methods.list.all,
-                          opt.method = "ILP")
+# Define polynomial rank statistics with different r values
+# Each method must be specified for each stratum
+r.vec <- c(2, 6, 10)
+methods.list.all <- list()
+for (j in seq_along(r.vec)) {
+  methods.list.all[[j]] <- lapply(1:s, function(i) {
+    list(name = "Polynomial", r = r.vec[j], std = TRUE, scale = FALSE)
+  })
+}
+
+# Test if the 90th percentile effect is <= 0
+k <- floor(0.9 * n)
+result <- pval_comb_block(Z, Y, k, c = 0, block, methods.list.all,
+                          opt.method = "ILP", null.max = 10000)
+print(result)
+
+# Using stratum-level combination method (comb.method = 2)
+result2 <- pval_comb_block(Z, Y, k, c = 0, block, methods.list.all,
+                           opt.method = "ILP", comb.method = 2)
+
+# Using LP relaxation (faster, conservative)
+result3 <- pval_comb_block(Z, Y, k, c = 0, block, methods.list.all,
+                           opt.method = "LP")
 }
 
 }

@@ -1,0 +1,99 @@
+#' Electric Circuits Professional Development Study Data
+#'
+#' Data from a randomized experiment studying the effects of professional
+#' development on elementary teachers' science teaching, specifically related
+#' to teaching about electric circuits.
+#'
+#' @format A data frame with 233 rows and 7 variables:
+#' \describe{
+#'   \item{Site}{Character. Study site identifier (S2-S8). The experiment was
+#'     conducted across 7 sites.}
+#'   \item{T.ID}{Numeric. Unique teacher identifier.}
+#'   \item{Tx}{Character. Treatment group assignment with four levels:
+#'     \itemize{
+#'       \item A: Treatment condition A
+#'       \item B: Treatment condition B
+#'       \item C: Treatment condition C
+#'       \item D: Control condition
+#'     }}
+#'   \item{TxAny}{Numeric. Binary indicator for any treatment (1) vs control (0).
+#'     Teachers in groups A, B, or C have TxAny=1; teachers in group D have TxAny=0.}
+#'   \item{Per.1}{Numeric. Pre-test score (percentage correct, 0-100).}
+#'   \item{Per.2}{Numeric. Post-test score (percentage correct, 0-100).}
+#'   \item{gain}{Numeric. Gain score calculated as Per.2 - Per.1.}
+#' }
+#'
+#' @details
+#' This dataset comes from a study of professional development programs for
+#' elementary science teachers. Teachers were randomly assigned to different
+#' professional development conditions within each site (stratified randomized
+#' experiment). The outcome measures assess teachers' content knowledge about
+#' electric circuits before and after the intervention.
+#'
+#' The dataset can be used to demonstrate methods for inference about quantiles
+#' of individual treatment effects in stratified randomized experiments using
+#' the CMRSS package.
+#'
+#' @source
+#' Heller, J. L., Shinohara, M., Miratrix, L., Hesketh, S. R., and Daehler, K. R. (2010).
+#' Learning science for teaching: Effects of professional development on elementary
+#' teachers, classrooms, and students. \emph{Proceedings from Society for Research
+#' on Educational Effectiveness}.
+#'
+#' @examples
+#' data(electric_teachers)
+#'
+#' # Basic exploration
+#' head(electric_teachers)
+#' table(electric_teachers$Site, electric_teachers$Tx)
+#'
+#' # Create treatment indicator for any treatment vs control
+#' Z <- electric_teachers$TxAny
+#' Y <- electric_teachers$gain
+#' block <- factor(electric_teachers$Site)
+#'
+#' # Summary by treatment status
+#' tapply(Y, Z, mean)
+#'
+#' # Number of treated and control units per site
+#' table(block, Z)
+#'
+#' \dontrun{
+#' ##### Example 1: CRE Analysis (ignoring site stratification) #####
+#'
+#' # Define Stephenson statistics with different s values
+#' s.vec <- c(2, 6, 10, 30)
+#' methods.list.cre <- lapply(s.vec, function(s) {
+#'   list(name = "Stephenson", s = s, std = TRUE, scale = TRUE)
+#' })
+#'
+#' # Confidence intervals for effect quantiles among treated
+#' ci.treat <- com_conf_quant_larger_cre(Z, Y,
+#'                                       methods.list = methods.list.cre,
+#'                                       nperm = 10000,
+#'                                       set = "treat",
+#'                                       alpha = 0.05)
+#'
+#' ##### Example 2: SRE Analysis (accounting for site stratification) #####
+#'
+#' s <- length(levels(block))  # 7 sites
+#'
+#' # Define polynomial rank statistics for each stratum
+#' r.vec <- c(2, 6, 10)
+#' methods.list.sre <- list()
+#' for (j in seq_along(r.vec)) {
+#'   methods.list.sre[[j]] <- lapply(1:s, function(i) {
+#'     list(name = "Polynomial", r = r.vec[j], std = TRUE, scale = FALSE)
+#'   })
+#' }
+#'
+#' # Confidence intervals accounting for stratification
+#' ci.treat.sre <- com_block_conf_quant_larger(Z, Y, block,
+#'                                             set = "treat",
+#'                                             methods.list.all = methods.list.sre,
+#'                                             weight.name = "asymp.opt",
+#'                                             opt.method = "ILP",
+#'                                             alpha = 0.05)
+#' }
+#'
+"electric_teachers"

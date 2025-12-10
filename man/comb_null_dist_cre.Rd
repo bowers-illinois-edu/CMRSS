@@ -2,8 +2,7 @@
 % Please edit documentation in R/CMRSS_CRE.R
 \name{comb_null_dist_cre}
 \alias{comb_null_dist_cre}
-\title{null distribution for minimum p-values
-output: the distribution of the minimum p-value, particularly Monte Carlo samples from \overline{F} in Theorem 1 of the paper}
+\title{Null distribution for minimum p-values}
 \usage{
 comb_null_dist_cre(
   n,
@@ -14,7 +13,24 @@ comb_null_dist_cre(
   stat.null.mult = NULL
 )
 }
-\description{
-null distribution for minimum p-values
-output: the distribution of the minimum p-value, particularly Monte Carlo samples from \overline{F} in Theorem 1 of the paper
+\arguments{
+\item{n}{Total number of units.}
+
+\item{m}{Number of treated units.}
+
+\item{methods.list}{A list of method specifications.}
+
+\item{Z.perm}{Optional permutation matrix.}
+
+\item{nperm}{Number of permutations for null distribution.}
+
+\item{stat.null.mult}{Optional pre-computed null distribution matrix.}
 }
+\value{
+A numeric vector of minimum p-values under the null.
+}
+\description{
+Computes the distribution of the minimum p-value, particularly Monte Carlo
+samples from the combined null distribution F in Theorem 1 of the paper.
+}
+\keyword{internal}

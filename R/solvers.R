@@ -493,3 +493,197 @@ parse_opt_method <- function(opt.method) {
 
   return(list(exact = exact, solver = solver))
 }
+
+
+##############################################################################
+## Stratum-level combination solvers (for comb.method = 2)
+##############################################################################
+
+#' Stratum-level optimization using Gurobi solver
+#'
+#' Solves the optimization problem for the stratum-level combination method
+#' (comb.method = 2) using Gurobi.
+#'
+#' @param coeflist A list of B matrices containing the stratum-wise
+#'   standardized test statistics for different coverage scenarios.
+#' @param p Upper bound on the number of units with effects greater than c.
+#' @param exact Logical; if TRUE, solve as integer linear program (ILP).
+#'   If FALSE, solve as linear program (LP relaxation).
+#'
+#' @return A list with:
+#'   \item{sol}{Solution vector}
+#'   \item{obj}{Optimal objective value}
+#'
+#' @seealso \code{\link{HiGHS_sol_stratum_com}} for the HiGHS implementation
+#'
+#' @keywords internal
+Gurobi_sol_stratum_com <- function(coeflist, p, exact = TRUE) {
+
+  if (!requireNamespace("gurobi", quietly = TRUE)) {
+    stop("Package 'gurobi' is required but not installed.\n",
+         "See: https://www.gurobi.com/documentation/current/quickstart_mac/r_ins_the_r_package.html")
+  }
+  if (!requireNamespace("Matrix", quietly = TRUE)) {
+    stop("Package 'Matrix' is required but not installed.\n",
+         "Install it with: install.packages('Matrix')")
+  }
+
+  model <- list()
+  Q <- NULL
+  B <- length(coeflist)
+  nb <- vector(length = B)
+
+  for (i in 1:B) {
+    Q <- c(Q, coeflist[[i]][2, ])
+    nb[i] <- ncol(coeflist[[i]])
+  }
+
+  n <- length(Q)
+  indx <- c(0, cumsum(nb))
+  Ai <- rep(B + 1, 2 * n)
+  Aj <- rep(1:n, 2)
+  x <- rep(1, 2 * n)
+  for (i in 1:B) {
+    Ai[(indx[i] + 1):indx[i + 1]] <- i
+    x[(n + indx[i] + 1):(n + indx[i + 1])] <- coeflist[[i]][1, ]
+  }
+  A <- Matrix::sparseMatrix(Ai, Aj, x = x)
+  model$A <- A
+  model$obj <- Q
+  model$modelsense <- "min"
+  model$rhs <- c(rep(1, B), p)
+  model$sense <- c(rep("=", B), "<=")
+  if (exact) {
+    model$vtype <- "B"
+  }
+  params <- list(OutputFlag = 0)
+  result <- gurobi::gurobi(model, params)
+  return(list(sol = result$x, obj = result$objval))
+}
+
+
+#' Stratum-level optimization using HiGHS solver
+#'
+#' Solves the optimization problem for the stratum-level combination method
+#' (comb.method = 2) using HiGHS.
+#'
+#' @inheritParams Gurobi_sol_stratum_com
+#'
+#' @return A list with:
+#'   \item{sol}{Solution vector}
+#'   \item{obj}{Optimal objective value}
+#'
+#' @seealso \code{\link{Gurobi_sol_stratum_com}} for the Gurobi implementation
+#'
+#' @keywords internal
+HiGHS_sol_stratum_com <- function(coeflist, p, exact = TRUE) {
+
+  if (!requireNamespace("highs", quietly = TRUE)) {
+    stop("Package 'highs' is required but not installed.\n",
+         "Install it with: install.packages('highs')")
+  }
+  if (!requireNamespace("Matrix", quietly = TRUE)) {
+    stop("Package 'Matrix' is required but not installed.\n",
+         "Install it with: install.packages('Matrix')")
+  }
+
+  B <- length(coeflist)
+  nb <- vector(length = B)
+
+  # Build objective vector from test statistics
+  Q <- NULL
+  for (i in 1:B) {
+    Q <- c(Q, coeflist[[i]][2, ])
+    nb[i] <- ncol(coeflist[[i]])
+  }
+
+  n <- length(Q)
+
+  # Build constraint matrix
+  indx <- c(0, cumsum(nb))
+  Ai <- rep(B + 1, 2 * n)
+  Aj <- rep(1:n, 2)
+  Ax <- rep(1, 2 * n)
+  for (i in 1:B) {
+    Ai[(indx[i] + 1):indx[i + 1]] <- i
+    Ax[(n + indx[i] + 1):(n + indx[i + 1])] <- coeflist[[i]][1, ]
+  }
+  A <- Matrix::sparseMatrix(i = Ai, j = Aj, x = Ax, dims = c(B + 1, n))
+
+  # Right-hand side and bounds
+  rhs <- c(rep(1, B), p)
+  lhs <- c(rep(1, B), -Inf)
+
+  # Variable bounds and types
+  lower_bounds <- rep(0, n)
+  upper_bounds <- rep(1, n)
+
+  if (exact) {
+    types <- rep("I", n)
+  } else {
+    types <- rep("C", n)
+  }
+
+  # Solve with HiGHS
+  result <- highs::highs_solve(
+    L = Q,
+    lower = lower_bounds,
+    upper = upper_bounds,
+    A = A,
+    lhs = lhs,
+    rhs = rhs,
+    types = types,
+    maximum = FALSE,
+    control = highs::highs_control(log_to_console = FALSE)
+  )
+
+  if (result$status != 7) {
+    warning("HiGHS solver did not find optimal solution. Status: ", result$status_message)
+  }
+
+  return(list(sol = result$primal_solution, obj = result$objective_value))
+}
+
+
+#' Unified solver wrapper for stratum-level optimization
+#'
+#' A unified interface for solving the stratum-level optimization problem
+#' using either Gurobi or HiGHS solver.
+#'
+#' @inheritParams Gurobi_sol_stratum_com
+#' @param solver Character string specifying the solver to use: "auto",
+#'   "highs", or "gurobi".
+#'
+#' @return A list with:
+#'   \item{sol}{Solution vector}
+#'   \item{obj}{Optimal objective value}
+#'   \item{solver}{The solver that was used}
+#'
+#' @seealso \code{\link{solve_optimization}} for the standard optimization
+#'
+#' @keywords internal
+solve_stratum_optimization <- function(coeflist, p, exact = TRUE, solver = "auto") {
+
+  # Determine which solver to use
+  if (solver == "auto") {
+    solver <- get_default_solver()
+  } else {
+    solver <- tolower(solver)
+    if (!solver %in% c("gurobi", "highs")) {
+      stop("Unknown solver: ", solver, ". Must be 'auto', 'gurobi', or 'highs'.")
+    }
+    if (!solver_available(solver)) {
+      stop("Solver '", solver, "' is not available. Please install the corresponding package.")
+    }
+  }
+
+  # Call the appropriate solver
+  if (solver == "highs") {
+    result <- HiGHS_sol_stratum_com(coeflist, p, exact)
+  } else {
+    result <- Gurobi_sol_stratum_com(coeflist, p, exact)
+  }
+
+  result$solver <- solver
+  return(result)
+}

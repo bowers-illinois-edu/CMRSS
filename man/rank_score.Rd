@@ -29,8 +29,8 @@ Computes rank scores for rank-based test statistics. Supports Wilcoxon,
 Stephenson, and Polynomial rank scores.
 }
 \details{
-Wilcoxon scores are normalized to the 0-1 range by dividing by max.
-Stephenson scores use binomial coefficients and are also normalized.
 Polynomial scores optionally use Puri(1965) normalization.
+Stephenson scores use binomial coefficients.
+Wilcoxon scores are simply the ranks 1 to n.
 }
 \keyword{internal}

@@ -2,8 +2,7 @@
 % Please edit documentation in R/CMRSS_CRE.R
 \name{pval_cre}
 \alias{pval_cre}
-\title{calculating p-value for single method
-output: the p-value assuming at most n-k treated units having effects > c, using a single rank sum statistic}
+\title{Calculate p-value for single method}
 \usage{
 pval_cre(
   Z,
@@ -18,7 +17,32 @@ pval_cre(
   ind.sort.treat = NULL
 )
 }
-\description{
-calculating p-value for single method
-output: the p-value assuming at most n-k treated units having effects > c, using a single rank sum statistic
+\arguments{
+\item{Z}{An n-dimensional binary treatment assignment vector.}
+
+\item{Y}{An n-dimensional observed outcome vector.}
+
+\item{k}{Quantile index for the hypothesis.}
+
+\item{c}{Threshold for the null hypothesis.}
+
+\item{method.list}{A list specifying the rank score method.}
+
+\item{score}{Optional pre-computed score vector.}
+
+\item{stat.null}{Optional pre-computed null distribution.}
+
+\item{nperm}{Number of permutations for null distribution.}
+
+\item{Z.perm}{Optional permutation matrix.}
+
+\item{ind.sort.treat}{Optional sorted indices of treated units.}
 }
+\value{
+A numeric p-value.
+}
+\description{
+Computes the p-value assuming at most n-k treated units have effects > c,
+using a single rank sum statistic.
+}
+\keyword{internal}

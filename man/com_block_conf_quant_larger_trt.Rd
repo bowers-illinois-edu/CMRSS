@@ -12,6 +12,7 @@ com_block_conf_quant_larger_trt(
   methods.list.all,
   weight.name = "asymp.opt",
   opt.method = "ILP_auto",
+  comb.method = 1,
   stat.null = NULL,
   null.max = 10^4,
   tol = 0.01,
@@ -49,6 +50,12 @@ adjusted.}
 }
 HiGHS is recommended for users without a Gurobi license. Both solvers
 produce equivalent results.}
+
+\item{comb.method}{Integer specifying the combination method:
+\itemize{
+\item 1: Combine statistics across strata first, then take maximum across methods (default)
+\item 2: Take maximum across methods within each stratum first, then combine across strata
+}}
 
 \item{stat.null}{An vector whose empirical distribution
 approximates the randomization distribution of the combined

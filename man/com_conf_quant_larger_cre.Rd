@@ -16,41 +16,101 @@ com_conf_quant_larger_cre(
 )
 }
 \arguments{
-\item{Z}{An \eqn{n} dimensional treatment assignment vector.}
+\item{Z}{An \eqn{n} dimensional treatment assignment vector (1 = treated, 0 = control).}
 
 \item{Y}{An \eqn{n} dimensional observed outcome vector.}
 
-\item{methods.list}{A list of lists specifies the choice of the multiple
-rank sum test statistics. For example, list(name = "Wilcoxon") means the Wilcoxon
-rank sum statistic, list(name = "Stephenson", s = 10) means
-the Stephenson rank sum statistic with parameter s = 10, and
-list(name = "Polynomial", r = 2, std = TRUE, scale = FALSE) means using polynomial
-rank score with standarizing statistics without scaling.}
+\item{methods.list}{A list of lists specifying the choice of multiple
+rank sum test statistics. Each element should be a list with:
+\itemize{
+\item \code{name}: "Wilcoxon", "Stephenson", or "Polynomial"
+\item \code{s}: (for Stephenson) parameter s controlling sensitivity to upper ranks
+\item \code{r}: (for Polynomial) power parameter
+\item \code{std}: (for Polynomial) logical, use Puri(1965) normalization
+\item \code{scale}: logical, standardize scores to mean 0 and sd 1
+}}
 
 \item{nperm}{A positive integer representing the number of
 permutations for approximating the randomization distribution of
 the rank sum statistic.}
 
-\item{set}{set of quantiles of interests. If "treat", generate prediction intervals
-for effect quantiles among treated units. If "control", generate prediction intervals
-for effect quantiles among control units. If "all", generate confidence intervals for
-all effect quantiles.}
+\item{set}{Set of quantiles of interest:
+\itemize{
+\item "treat": Prediction intervals for effect quantiles among treated units
+\item "control": Prediction intervals for effect quantiles among control units
+\item "all": Confidence intervals for all effect quantiles
+}}
 
 \item{Z.perm}{A \eqn{n \times nperm} matrix that specifies the
-permutated assignments for approximating the null distribution of
-the test statistic.}
+permuted assignments for approximating the null distribution of
+the test statistic. If NULL, generated automatically.}
 
-\item{alpha}{A numerical object, where 1-alpha indicates the
+\item{alpha}{A numeric value where 1-alpha indicates the
 confidence level.}
 
-\item{tol}{A numerical object specifying the precision of the
+\item{tol}{A numeric value specifying the precision of the
 obtained confidence intervals. For example, if tol = 10^(-3),
 then the confidence limits are precise up to 3 digits.}
 }
 \value{
 A vector specifying lower limits of prediction (confidence) intervals for
-quantiles k = 1 ~ m (or n - m, or n).
+quantiles k = 1 ~ m (for "treat"), n - m + 1 ~ n (for "control"), or 1 ~ n (for "all").
 }
 \description{
-Simultaneous lower bounds using multiple rank sum statistics in CRE
+Computes simultaneous confidence/prediction intervals for quantiles of
+individual treatment effects in completely randomized experiments (CRE)
+by combining multiple rank sum statistics.
+}
+\details{
+This function implements the combined rank sum test approach for inference
+about quantiles of individual treatment effects. By combining multiple rank
+statistics (e.g., Stephenson statistics with different s values), the method
+can achieve better power across a range of effect distributions.
+
+When \code{set = "all"}, the function combines inference from both treated and
+control units using the approach described in Chen and Li (2024), with a
+Bonferroni-style adjustment (alpha/2 for each direction).
+}
+\examples{
+\dontrun{
+# Load the electric teachers dataset
+data(electric_teachers)
+
+# Set up treatment and outcome (treating as CRE, ignoring sites)
+Z <- electric_teachers$TxAny
+Y <- electric_teachers$gain
+
+# Define multiple Stephenson statistics with different s values
+# Larger s focuses more on upper ranks (larger treatment effects)
+s.vec <- c(2, 6, 10, 30)
+methods.list <- lapply(s.vec, function(s) {
+  list(name = "Stephenson", s = s, std = TRUE, scale = TRUE)
+})
+
+# Prediction intervals for treated units (90\% confidence)
+ci.treat <- com_conf_quant_larger_cre(Z, Y,
+                                      methods.list = methods.list,
+                                      nperm = 10000,
+                                      set = "treat",
+                                      alpha = 0.05)
+
+# Prediction intervals for control units
+ci.control <- com_conf_quant_larger_cre(Z, Y,
+                                        methods.list = methods.list,
+                                        nperm = 10000,
+                                        set = "control",
+                                        alpha = 0.05)
+
+# Confidence intervals for all effect quantiles
+ci.all <- com_conf_quant_larger_cre(Z, Y,
+                                    methods.list = methods.list,
+                                    nperm = 10000,
+                                    set = "all",
+                                    alpha = 0.10)
+}
+
+}
+\seealso{
+\code{\link{com_block_conf_quant_larger}} for stratified experiments,
+\code{\link{comb_p_val_cre}} for p-value computation
 }

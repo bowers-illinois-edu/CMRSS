@@ -2,8 +2,7 @@
 % Please edit documentation in R/CMRSS_CRE.R
 \name{com_conf_quant_larger_trt}
 \alias{com_conf_quant_larger_trt}
-\title{Helper function for Simultaneous Inference for multiple quantiles on CRE
-using combined p-value.}
+\title{Simultaneous inference for multiple quantiles on CRE (treated units)}
 \usage{
 com_conf_quant_larger_trt(
   Z,
@@ -17,6 +16,30 @@ com_conf_quant_larger_trt(
   ind.sort.treat = NULL
 )
 }
-\description{
-Output: lower limits of prediction intervals for (prespecified) quantiles across the treated units.
+\arguments{
+\item{Z}{An n-dimensional binary treatment assignment vector.}
+
+\item{Y}{An n-dimensional observed outcome vector.}
+
+\item{methods.list}{A list of method specifications.}
+
+\item{nperm}{Number of permutations for null distribution.}
+
+\item{k.vec}{Vector of quantile indices to compute intervals for.}
+
+\item{Z.perm}{Optional permutation matrix.}
+
+\item{alpha}{Significance level.}
+
+\item{tol}{Tolerance for root-finding.}
+
+\item{ind.sort.treat}{Optional sorted indices of treated units.}
 }
+\value{
+A numeric vector of lower confidence limits.
+}
+\description{
+Helper function for computing lower limits of prediction intervals for
+quantiles across the treated units using combined p-value.
+}
+\keyword{internal}
