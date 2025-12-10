@@ -1,0 +1,52 @@
+url: https://jwbowers.github.io/CMRSS/
+
+template:
+  bootstrap: 5
+
+navbar:
+  structure:
+    left: [intro, reference, articles]
+    right: [search, github]
+  components:
+    github:
+      icon: fa-github
+      href: https://github.com/jwbowers/CMRSS
+      aria-label: GitHub
+
+reference:
+  - title: "Completely Randomized Experiments (CRE)"
+    desc: "Functions for inference in completely randomized experiments"
+    contents:
+      - comb_p_val_cre
+      - com_conf_quant_larger_cre
+
+  - title: "Stratified Randomized Experiments (SRE)"
+    desc: "Functions for inference in stratified/block randomized experiments"
+    contents:
+      - pval_comb_block
+      - com_block_conf_quant_larger
+
+  - title: "Solver Utilities"
+    desc: "Functions for optimization solver management"
+    contents:
+      - solve_optimization
+      - solver_available
+      - get_default_solver
+      - parse_opt_method
+
+  - title: "Comparison Methods"
+    desc: "Benchmark methods from the literature"
+    contents:
+      - method_caughey
+      - method_chen_li
+      - method_berger_boos
+
+  - title: "Data"
+    desc: "Example datasets"
+    contents:
+      - electric_teachers
+
+home:
+  links:
+    - text: Report a bug
+      href: https://github.com/jwbowers/CMRSS/issues
