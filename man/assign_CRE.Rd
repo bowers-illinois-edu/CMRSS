@@ -20,4 +20,3 @@ An n x nperm matrix where each column is a permuted treatment assignment.
 Generates a matrix of permuted treatment assignments for completely
 randomized experiments.
 }
-\keyword{internal}

@@ -29,7 +29,7 @@ sort_treat <- function(Y, Z){
 #'
 #' @return An n x nperm matrix where each column is a permuted treatment assignment.
 #'
-#' @keywords internal
+#' @export
 assign_CRE <- function(n, m, nperm){
   if(is.finite(nperm)){
     # Vectorized: generate all sample indices at once
