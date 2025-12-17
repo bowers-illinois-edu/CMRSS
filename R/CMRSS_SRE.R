@@ -59,18 +59,20 @@ assign_block <- function(block.sum, null.max = 10^4){
   mb_ctrl = block.sum$mb_ctrl
   units.block = block.sum$units.block
   block.levels = block.sum$block.levels
-  
+
   n = sum(nb)
-  
-  Z.perm = matrix(NA, nrow = n, ncol = null.max)
-  for(iter in 1 : null.max){
-    tmp = rep(0, n)
-    for(i in 1 : B){
-      tmp[units.block[[i]]] = sample( c(rep(1, mb[i]), rep(0, mb_ctrl[i])) )
-    }
-    Z.perm[,iter] = tmp
+
+  Z.perm = matrix(0, nrow = n, ncol = null.max)
+
+  # Vectorized: for each block, generate all null.max permutations at once
+  for(i in 1:B){
+    block_vec = c(rep(1, mb[i]), rep(0, mb_ctrl[i]))
+    # Generate null.max permutations for this block (nb[i] x null.max matrix)
+    block_perms = replicate(null.max, sample(block_vec))
+    # Assign to the appropriate rows
+    Z.perm[units.block[[i]], ] = block_perms
   }
-  
+
   return(Z.perm)
 }
 
@@ -268,10 +270,10 @@ com_null_dist_block <- function(Z, block,
                                 weight,
                                 block.sum = NULL,
                                 Z.perm = NULL){
-  
+
   n = length(Z)
   H = length(methods.list.all)
-  
+
   if(is.null(block.sum)){
     block.sum = summary_block(Z, block)
   }
@@ -282,7 +284,7 @@ com_null_dist_block <- function(Z, block,
   mb_ctrl = block.sum$mb_ctrl
   units.block = block.sum$units.block
   block.levels = block.sum$block.levels
-  
+
   if(is.null(scores.list.all)){
     scores.list.all = list()
     for(h in 1:H){
@@ -290,7 +292,7 @@ com_null_dist_block <- function(Z, block,
       scores.list.all[[h]] = score_all_blocks(nb, method.list.all)
     }
   }
-  
+
   ## calculating mean and sigma of each stratified rank sum statistic
   mu_vec = rep(NA, H)
   sig_vec = rep(NA, H)
@@ -298,32 +300,42 @@ com_null_dist_block <- function(Z, block,
     method.list.all = methods.list.all[[h]]
     score.list.all = scores.list.all[[h]]
     tmp = mu_sigma_single_weight_strat_rank_sum_stat(Z, block, method.list.all, score.list.all, weight, block.sum)
-    
+
     mu_vec[h] = tmp$mu
     sig_vec[h] = tmp$sigma
   }
-  
+
   ## generating random assignment vector corresponding to given block structure
-  Z.perm = assign_block(block.sum, null.max)
-  
-  test.stat.all = matrix(NA, nrow = H, ncol = null.max)
+  if(is.null(Z.perm)){
+    Z.perm = assign_block(block.sum, null.max)
+  }
+
+  # Vectorized computation of test statistics
+  # Key insight: Y = 1:n, so ranks within each block are fixed.
+  # We pre-compute weighted reordered scores, then use matrix multiplication.
+
   Y = c(1:n)
-  
-  for(iter2 in 1 : null.max){
-    Z.tmp = Z.perm[, iter2]
-    for(h in 1 : H){
-      method.list.all = methods.list.all[[h]]
-      tmp2 = single_weight_strat_rank_sum_stat(Z = Z.tmp, Y,
-                                               block = block,
-                                               method.list.all = method.list.all,
-                                               score.list.all = scores.list.all[[h]],
-                                               weight = weight,
-                                               block.sum = block.sum)
-      
-      test.stat.all[h ,iter2] = (tmp2 - mu_vec[h]) / sig_vec[h]
+
+  # Pre-compute reordered scores for each method (n x H matrix)
+  reordered_scores = matrix(0, nrow = n, ncol = H)
+  for(h in 1:H){
+    score.list.all = scores.list.all[[h]]
+    for(i in 1:B){
+      ys = Y[units.block[[i]]]
+      ranks_in_block = rank(ys, ties.method = "first")
+      score = score.list.all[[i]]
+      # Weighted score contribution for this block
+      reordered_scores[units.block[[i]], h] = weight[i] / mb[i] * score[ranks_in_block]
     }
   }
-  
+
+  # Compute all test statistics using matrix multiplication
+  # test.stat.raw[h, iter] = sum(reordered_scores[, h] * Z.perm[, iter])
+  test.stat.raw = crossprod(reordered_scores, Z.perm)  # H x null.max matrix
+
+  # Normalize: (raw - mu) / sigma
+  test.stat.all = (test.stat.raw - mu_vec) / sig_vec  # broadcasting over columns
+
   test.stat.max = apply(test.stat.all, 2, max)
   return(test.stat.max)
 }

@@ -32,19 +32,25 @@ sort_treat <- function(Y, Z){
 #' @keywords internal
 assign_CRE <- function(n, m, nperm){
   if(is.finite(nperm)){
-    Z.perm = matrix(0, nrow = n, ncol = nperm)
-    for(iter in 1:nperm){
-      Z.perm[sample( c(1:n), m, replace = FALSE ), iter] = 1
-    }
+    # Vectorized: generate all sample indices at once
+    indices <- replicate(nperm, sample.int(n, m, replace = FALSE))
+    # indices is m x nperm matrix
+
+    # Create Z.perm using matrix indexing
+    Z.perm <- matrix(0, nrow = n, ncol = nperm)
+    col_indices <- rep(1:nperm, each = m)
+    row_indices <- as.vector(indices)
+    Z.perm[cbind(row_indices, col_indices)] <- 1
   }
 
   if(is.infinite(nperm)){
-    comb.all = combn(n, m)
-    nperm = ncol(comb.all)
-    Z.perm = matrix(0, nrow = n, ncol = nperm)
-    for(iter in 1:nperm){
-      Z.perm[comb.all[, iter], iter] = 1
-    }
+    comb.all <- utils::combn(n, m)
+    nperm <- ncol(comb.all)
+    Z.perm <- matrix(0, nrow = n, ncol = nperm)
+    # Vectorized using matrix indexing
+    col_indices <- rep(1:nperm, each = m)
+    row_indices <- as.vector(comb.all)
+    Z.perm[cbind(row_indices, col_indices)] <- 1
   }
 
   return(Z.perm)
@@ -131,10 +137,9 @@ null_dist <- function(n, m, method.list = NULL, score = NULL,
     nperm = ncol(Z.perm)
   }
 
-  stat.null = rep(NA, ncol(Z.perm))
-  for(iter in 1:ncol(Z.perm)){
-    stat.null[iter] = sum( score[ Z.perm[, iter] == 1 ] )
-  }
+  # Vectorized: compute all permutation statistics in one matrix operation
+  # For each column of Z.perm, sum the scores where Z.perm == 1
+  stat.null = as.vector(crossprod(score, Z.perm))
 
   return(stat.null)
 }
