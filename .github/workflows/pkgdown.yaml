@@ -21,7 +21,7 @@ jobs:
       group: pkgdown-${{ github.event_name != 'pull_request' || github.run_id }}
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
-      RSPM_NO_USE: gurobi  # Exclude the gurobi package from dependency resolution
+      RSPM_NO_USE: gurobi # Exclude the gurobi package from dependency resolution
     permissions:
       contents: write
     steps:
@@ -35,8 +35,8 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::pkgdown, any::roxygen2, li-xinran/RIQITE, local::.
-          pak-args: exclude=gurobi
+          extra-packages: any::pkgdown, any::roxygen2
+          dependencies: hard
           needs: website
 
       - name: Document package
