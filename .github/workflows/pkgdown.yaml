@@ -36,6 +36,7 @@ jobs:
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           extra-packages: any::pkgdown, any::roxygen2, li-xinran/RIQITE, local::.
+          dependencies: TRUE
           needs: website
 
       - name: Document package
