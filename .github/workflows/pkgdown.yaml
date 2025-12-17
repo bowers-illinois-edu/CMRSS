@@ -37,6 +37,7 @@ jobs:
         with:
           extra-packages: any::pkgdown, any::roxygen2, li-xinran/RIQITE, local::.
           needs: website
+          dependencies: hard
 
       - name: Document package
         run: roxygen2::roxygenize()
