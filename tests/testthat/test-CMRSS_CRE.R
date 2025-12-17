@@ -1,5 +1,104 @@
 # Tests for CRE (Completely Randomized Experiment) functions
 
+# Internal function tests (verify vectorization correctness)
+
+test_that("assign_CRE generates valid permutation matrices", {
+  set.seed(101)
+  n <- 20
+  m <- 8
+  nperm <- 100
+
+  z_perm <- CMRSS:::assign_CRE(n, m, nperm)
+
+  # Check dimensions
+  expect_equal(dim(z_perm), c(n, nperm))
+
+  # Check each column has exactly m ones
+  expect_true(all(colSums(z_perm) == m))
+
+  # Check all values are 0 or 1
+  expect_true(all(z_perm %in% c(0, 1)))
+})
+
+
+test_that("assign_CRE with infinite nperm generates all combinations", {
+  n <- 6
+  m <- 2
+  # Total combinations = choose(6,2) = 15
+
+  z_perm <- CMRSS:::assign_CRE(n, m, Inf)
+
+  # Check dimensions
+  expect_equal(ncol(z_perm), choose(n, m))
+  expect_equal(nrow(z_perm), n)
+
+  # Check each column has exactly m ones
+  expect_true(all(colSums(z_perm) == m))
+
+  # Check all combinations are unique
+  expect_equal(ncol(unique(z_perm, MARGIN = 2)), choose(n, m))
+})
+
+
+test_that("null_dist returns correct statistics (vectorized vs loop)", {
+  set.seed(123)
+  n <- 20
+  m <- 8
+  nperm <- 100
+
+  # Generate permutations
+  z_perm <- matrix(0, nrow = n, ncol = nperm)
+  for (iter in 1:nperm) {
+    z_perm[sample(1:n, m, replace = FALSE), iter] <- 1
+  }
+
+  # Test with Wilcoxon scores
+  score <- 1:n
+
+  # Compute expected result using explicit loop (the old way)
+  expected <- rep(NA, nperm)
+  for (iter in 1:nperm) {
+    expected[iter] <- sum(score[z_perm[, iter] == 1])
+  }
+
+  # Compute using vectorized crossprod (the new way)
+  result <- as.vector(crossprod(score, z_perm))
+
+  expect_equal(result, expected)
+})
+
+
+test_that("null_dist works with Stephenson scores", {
+  set.seed(456)
+  n <- 30
+  m <- 10
+  nperm <- 50
+
+  # Generate permutations
+  z_perm <- matrix(0, nrow = n, ncol = nperm)
+  for (iter in 1:nperm) {
+    z_perm[sample(1:n, m, replace = FALSE), iter] <- 1
+  }
+
+  # Stephenson scores with s=6
+  s <- 6
+  score <- choose((1:n) - 1, s - 1)
+
+  # Compute expected result using explicit loop
+  expected <- rep(NA, nperm)
+  for (iter in 1:nperm) {
+    expected[iter] <- sum(score[z_perm[, iter] == 1])
+  }
+
+  # Compute using vectorized crossprod
+  result <- as.vector(crossprod(score, z_perm))
+
+  expect_equal(result, expected)
+})
+
+
+# API function tests
+
 test_that("comb_p_val_cre returns valid p-value", {
   set.seed(12345)
 

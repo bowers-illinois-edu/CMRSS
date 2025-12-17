@@ -1,5 +1,55 @@
 # Tests for SRE (Stratified Randomized Experiment) functions
 
+# Internal function tests (verify vectorization correctness)
+
+test_that("summary_block correctly summarizes block structure", {
+  Z <- c(1, 1, 0, 0, 0,
+         1, 1, 1, 0, 0)
+  block <- factor(c(rep("A", 5), rep("B", 5)))
+
+  result <- CMRSS:::summary_block(Z, block)
+
+  expect_equal(result$B, 2)
+  expect_equal(result$nb, c(5, 5))
+  expect_equal(result$mb, c(2, 3))
+  expect_equal(result$mb_ctrl, c(3, 2))
+})
+
+
+test_that("assign_block generates valid block-randomized permutations", {
+  set.seed(202)
+
+  # Create a simple block structure
+  n <- 30
+  Z <- c(rep(1, 5), rep(0, 5),
+         rep(1, 3), rep(0, 7),
+         rep(1, 4), rep(0, 6))
+  block <- factor(c(rep("A", 10), rep("B", 10), rep("C", 10)))
+
+  block_sum <- CMRSS:::summary_block(Z, block)
+  null_max <- 100
+
+  z_perm <- CMRSS:::assign_block(block_sum, null_max)
+
+  # Check dimensions
+  expect_equal(dim(z_perm), c(n, null_max))
+
+  # Check all values are 0 or 1
+  expect_true(all(z_perm %in% c(0, 1)))
+
+  # Check each block has correct number of treated in each permutation
+  for (i in 1:block_sum$B) {
+    block_sums <- colSums(z_perm[block_sum$units.block[[i]], , drop = FALSE])
+    expect_true(all(block_sums == block_sum$mb[i]))
+  }
+
+  # Check total treated is correct in each permutation
+  expect_true(all(colSums(z_perm) == sum(Z)))
+})
+
+
+# API function tests
+
 test_that("pval_comb_block works with comb.method=1", {
   skip_if_not(
     solver_available("highs") || solver_available("gurobi"),
