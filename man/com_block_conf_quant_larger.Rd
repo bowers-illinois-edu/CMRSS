@@ -16,6 +16,7 @@ com_block_conf_quant_larger(
   comb.method = 1,
   stat.null = NULL,
   null.max = 10^4,
+  Z.perm = NULL,
   tol = 0.01,
   alpha = 0.1
 )
@@ -69,6 +70,11 @@ stratified rank sum statistic.}
 \item{null.max}{A positive integer representing the number of
 permutations for approximating the randomization distribution of
 the rank sum statistic.}
+
+\item{Z.perm}{Optional pre-computed n x null.max matrix of permuted
+treatment assignments. If provided, this matrix will be used instead
+of generating new permutations. Can be generated using
+\code{assign_block(summary_block(Z, block), null.max)}.}
 
 \item{tol}{A numerical object specifying the precision of the
 obtained confidence intervals. For example, if tol = 10^(-3),

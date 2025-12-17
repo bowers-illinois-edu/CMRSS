@@ -15,7 +15,7 @@
 #'   \item{units.block}{List of unit indices per block}
 #'   \item{block.levels}{Levels of the block factor}
 #'
-#' @keywords internal
+#' @export
 summary_block <- function(Z, block){
   # number of blocks
   if(!is.factor(block)){
@@ -50,7 +50,7 @@ summary_block <- function(Z, block){
 #'
 #' @return An n x null.max matrix of permuted treatment assignments.
 #'
-#' @keywords internal
+#' @export
 assign_block <- function(block.sum, null.max = 10^4){
   block = block.sum$block
   B = block.sum$B
@@ -791,7 +791,9 @@ com_null_dist_block_stratum <- function(Z, block, methods.list.all,
 
 
   # generating random assignment vector corresponding to given block structure
-  Z.perm = assign_block(block.sum, null.max)
+  if(is.null(Z.perm)){
+    Z.perm = assign_block(block.sum, null.max)
+  }
 
   stat.null = rep(NA, null.max)
   Y = c(1:n)  # fixed outcome vector for null distribution
@@ -1010,6 +1012,7 @@ com_block_conf_quant_larger_trt <- function(Z, Y,
                                             opt.method = "ILP_auto",
                                             comb.method = 1,
                                             stat.null = NULL, null.max = 10^4,
+                                            Z.perm = NULL,
                                             tol = 0.01,
                                             alpha = 0.1) {
 
@@ -1039,7 +1042,7 @@ com_block_conf_quant_larger_trt <- function(Z, Y,
 
     if (is.null(stat.null)) {
       stat.null <- com_null_dist_block(Z, block, methods.list.all, scores.list.all,
-                                       null.max, weight, block.sum, Z.perm = NULL)
+                                       null.max, weight, block.sum, Z.perm = Z.perm)
     }
   } else {
     if (is.null(stat.null)) {
@@ -1047,7 +1050,7 @@ com_block_conf_quant_larger_trt <- function(Z, Y,
                                                scores.list.all,
                                                mu_sd_block_list = NULL,
                                                null.max = null.max, weight = weight,
-                                               block.sum = block.sum, Z.perm = NULL)
+                                               block.sum = block.sum, Z.perm = Z.perm)
     }
   }
 
@@ -1236,6 +1239,10 @@ com_block_conf_quant_larger_trt <- function(Z, Y,
 #' @param null.max A positive integer representing the number of
 #'   permutations for approximating the randomization distribution of
 #'   the rank sum statistic.
+#' @param Z.perm Optional pre-computed n x null.max matrix of permuted
+#'   treatment assignments. If provided, this matrix will be used instead
+#'   of generating new permutations. Can be generated using
+#'   \code{assign_block(summary_block(Z, block), null.max)}.
 #' @param tol A numerical object specifying the precision of the
 #'   obtained confidence intervals. For example, if tol = 10^(-3),
 #'   then the confidence limits are precise up to 3 digits.
@@ -1320,6 +1327,7 @@ com_block_conf_quant_larger <- function(Z, Y,
                                         comb.method = 1,
                                         stat.null = NULL,
                                         null.max = 10^4,
+                                        Z.perm = NULL,
                                         tol = 0.01,
                                         alpha = 0.1) {
 
@@ -1332,7 +1340,7 @@ com_block_conf_quant_larger <- function(Z, Y,
                                                 weight.name,
                                                 opt.method,
                                                 comb.method,
-                                                stat.null, null.max, tol, alpha)
+                                                stat.null, null.max, Z.perm, tol, alpha)
     ci.treat <- ci.treat[(n - sum(Z) + 1):n]
     return(ci.treat)
   }
@@ -1346,7 +1354,7 @@ com_block_conf_quant_larger <- function(Z, Y,
                                                   weight.name,
                                                   opt.method,
                                                   comb.method,
-                                                  stat.null, null.max, tol,
+                                                  stat.null, null.max, Z.perm, tol,
                                                   alpha)
     ci.control <- ci.control[(n - sum(Z) + 1):n]
     return(ci.control)
@@ -1359,7 +1367,7 @@ com_block_conf_quant_larger <- function(Z, Y,
                                                 weight.name,
                                                 opt.method,
                                                 comb.method,
-                                                stat.null, null.max, tol,
+                                                stat.null, null.max, Z.perm, tol,
                                                 alpha = alpha / 2)
     ci.treat <- ci.treat[(n - sum(Z) + 1):n]
 
@@ -1372,7 +1380,7 @@ com_block_conf_quant_larger <- function(Z, Y,
                                                   weight.name,
                                                   opt.method,
                                                   comb.method,
-                                                  stat.null, null.max, tol,
+                                                  stat.null, null.max, Z.perm, tol,
                                                   alpha = alpha / 2)
     ci.control <- ci.control[(n - sum(Z) + 1):n]
 

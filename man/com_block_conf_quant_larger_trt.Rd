@@ -15,6 +15,7 @@ com_block_conf_quant_larger_trt(
   comb.method = 1,
   stat.null = NULL,
   null.max = 10^4,
+  Z.perm = NULL,
   tol = 0.01,
   alpha = 0.1
 )

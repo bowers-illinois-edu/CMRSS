@@ -18,4 +18,3 @@ An n x null.max matrix of permuted treatment assignments.
 Generates permuted treatment assignments that respect the block structure
 of a stratified randomized experiment.
 }
-\keyword{internal}

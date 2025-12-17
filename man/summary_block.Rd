@@ -25,4 +25,3 @@ A list with components:
 Computes summary statistics for a stratified randomized experiment,
 including the number of blocks, units per block, and treated units per block.
 }
-\keyword{internal}
