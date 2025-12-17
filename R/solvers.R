@@ -98,6 +98,8 @@ get_default_solver <- function() {
 #' # Direct usage requires pre-computed coefficient lists
 #' result <- HiGHS_sol_com(Z, block, weight, coeflists, p, ms_list, exact = TRUE)
 #' }
+#' @importFrom highs highs_solve highs_control
+#' @importFrom Matrix sparseMatrix
 HiGHS_sol_com <- function(Z, block, weight, coeflists, p, ms_list, exact = TRUE, block.sum = NULL) {
 
   if (!requireNamespace("highs", quietly = TRUE)) {
@@ -274,6 +276,7 @@ HiGHS_sol_com <- function(Z, block, weight, coeflists, p, ms_list, exact = TRUE,
 #' # This is typically called internally by pval_comb_block()
 #' result <- Gurobi_sol_com(Z, block, weight, coeflists, p, ms_list, exact = TRUE)
 #' }
+#' @importFrom gurobi gurobi
 Gurobi_sol_com <- function(Z, block, weight, coeflists, p, ms_list, exact = TRUE, block.sum = NULL) {
 
   if (!requireNamespace("gurobi", quietly = TRUE)) {
@@ -367,7 +370,7 @@ Gurobi_sol_com <- function(Z, block, weight, coeflists, p, ms_list, exact = TRUE
 
 
   params <- list(OutputFlag = 0)
-  result <- gurobi::gurobi(model, params)
+  result <- gurobi(model, params)
 
   return(list(sol = result$x, obj = result$objval))
 }
@@ -515,7 +518,7 @@ parse_opt_method <- function(opt.method) {
 #'   \item{obj}{Optimal objective value}
 #'
 #' @seealso \code{\link{HiGHS_sol_stratum_com}} for the HiGHS implementation
-#'
+#' @importFrom gurobi gurobi
 #' @keywords internal
 Gurobi_sol_stratum_com <- function(coeflist, p, exact = TRUE) {
 
@@ -557,7 +560,7 @@ Gurobi_sol_stratum_com <- function(coeflist, p, exact = TRUE) {
     model$vtype <- "B"
   }
   params <- list(OutputFlag = 0)
-  result <- gurobi::gurobi(model, params)
+  result <- gurobi(model, params)
   return(list(sol = result$x, obj = result$objval))
 }
 
