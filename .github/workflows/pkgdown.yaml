@@ -35,8 +35,10 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::pkgdown, any::roxygen2
-          dependencies: "hard"
+          extra-packages: |
+            any::pkgdown
+            any::roxygen2
+            gurobi=?ignore
           needs: website
 
       - name: Document package
