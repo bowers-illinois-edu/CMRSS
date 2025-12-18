@@ -17,12 +17,15 @@ reference:
   - title: "Completely Randomized Experiments (CRE)"
     desc: "Functions for inference in completely randomized experiments"
     contents:
+      - assign_CRE
       - comb_p_val_cre
       - com_conf_quant_larger_cre
 
   - title: "Stratified Randomized Experiments (SRE)"
     desc: "Functions for inference in stratified/block randomized experiments"
     contents:
+      - summary_block
+      - assign_block
       - pval_comb_block
       - com_block_conf_quant_larger
 

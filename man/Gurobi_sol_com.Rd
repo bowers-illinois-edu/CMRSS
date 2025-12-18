@@ -59,3 +59,4 @@ result <- Gurobi_sol_com(Z, block, weight, coeflists, p, ms_list, exact = TRUE)
 \code{\link{HiGHS_sol_com}} for the HiGHS implementation,
 \code{\link{solve_optimization}} for the unified wrapper
 }
+\keyword{internal}

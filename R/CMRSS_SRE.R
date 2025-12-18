@@ -1095,6 +1095,8 @@ pval_comb_block <- function(Z, Y, k, c,
 #' @param alpha Significance level for confidence intervals.
 #'
 #' @return Vector of lower confidence limits for the specified quantiles.
+#'
+#' @keywords internal
 com_block_conf_quant_larger_trt <- function(Z, Y,
                                             block,
                                             k.vec = NULL,

@@ -98,6 +98,7 @@ get_default_solver <- function() {
 #' # Direct usage requires pre-computed coefficient lists
 #' result <- HiGHS_sol_com(Z, block, weight, coeflists, p, ms_list, exact = TRUE)
 #' }
+#' @keywords internal
 #' @importFrom highs highs_solve highs_control
 #' @importFrom Matrix sparseMatrix
 HiGHS_sol_com <- function(Z, block, weight, coeflists, p, ms_list, exact = TRUE, block.sum = NULL) {
@@ -275,6 +276,7 @@ HiGHS_sol_com <- function(Z, block, weight, coeflists, p, ms_list, exact = TRUE,
 #' # This is typically called internally by pval_comb_block()
 #' result <- Gurobi_sol_com(Z, block, weight, coeflists, p, ms_list, exact = TRUE)
 #' }
+#' @keywords internal
 #' @importFrom gurobi gurobi
 Gurobi_sol_com <- function(Z, block, weight, coeflists, p, ms_list, exact = TRUE, block.sum = NULL) {
 

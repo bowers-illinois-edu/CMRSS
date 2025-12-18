@@ -76,3 +76,4 @@ Vector of lower confidence limits for the specified quantiles.
 \description{
 Output is a lower limit of prediction intervals for prespecified quantiles.
 }
+\keyword{internal}

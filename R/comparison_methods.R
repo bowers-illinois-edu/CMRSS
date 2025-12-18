@@ -5,6 +5,7 @@
 #' RIQITE package implementation.
 #'
 #' @name comparison_methods
+#' @keywords internal
 NULL
 
 
