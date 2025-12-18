@@ -12,7 +12,8 @@ com_null_dist_block(
   null.max = 10^4,
   weight,
   block.sum = NULL,
-  Z.perm = NULL
+  Z.perm = NULL,
+  chunk_size = NULL
 )
 }
 \arguments{
@@ -31,6 +32,9 @@ com_null_dist_block(
 \item{block.sum}{Optional pre-computed block summary.}
 
 \item{Z.perm}{Optional pre-computed permutation matrix.}
+
+\item{chunk_size}{Optional number of permutations per chunk when
+\code{Z.perm} is \code{NULL}. If \code{NULL}, chosen adaptively based on \code{n}.}
 }
 \value{
 A numeric vector of the null distribution (length null.max).

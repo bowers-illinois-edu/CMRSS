@@ -148,55 +148,54 @@ HiGHS_sol_com <- function(Z, block, weight, coeflists, p, ms_list, exact = TRUE,
   ## 3. Test statistic constraints (H constraints)
   ## 4. Final normalization constraints (H constraints)
 
-  Ai <- c()
-  Aj <- c()
-  Ax <- c()
+  Ai_parts <- list()
+  Aj_parts <- list()
+  Ax_parts <- list()
 
   ## 1. Sum of x in each strata = 1 (B equality constraints)
-  Ai <- c(Ai, rep(1:B, mmb))
-  Aj <- c(Aj, 1:nn)
-  Ax <- c(Ax, rep(1, nn))
+  Ai_parts[[length(Ai_parts) + 1L]] <- rep(1:B, mmb)
+  Aj_parts[[length(Aj_parts) + 1L]] <- 1:nn
+  Ax_parts[[length(Ax_parts) + 1L]] <- rep(1, nn)
 
   ## 2. Coverage constraint: sum of k*x <= p
-  Ai <- c(Ai, rep(B + 1, nn))
-  Aj <- c(Aj, 1:nn)
+  Ai_parts[[length(Ai_parts) + 1L]] <- rep(B + 1, nn)
+  Aj_parts[[length(Aj_parts) + 1L]] <- 1:nn
   coeflist <- coeflists[[1]]
-  k_coefs <- c()
-  for (i in 1:B) {
-    k_coefs <- c(k_coefs, coeflist[[i]][1, ])
-  }
-  Ax <- c(Ax, k_coefs)
+  k_coefs <- unlist(lapply(coeflist, function(mat) mat[1, ]), use.names = FALSE)
+  Ax_parts[[length(Ax_parts) + 1L]] <- k_coefs
 
   ## 3. Test statistic constraints: T_h - eta_h = 0 (H constraints)
   for (h in 1:H) {
     coeflist <- coeflists[[h]]
-    Ai <- c(Ai, rep(B + 1 + h, nn))
-    Aj <- c(Aj, 1:nn)
-    t_coefs <- c()
-    for (b in 1:B) {
-      t_coefs <- c(t_coefs, weight[b] * (1 / mb[b]) * coeflist[[b]][2, ])
-    }
-    Ax <- c(Ax, t_coefs)
+    Ai_parts[[length(Ai_parts) + 1L]] <- rep(B + 1 + h, nn)
+    Aj_parts[[length(Aj_parts) + 1L]] <- 1:nn
+    t_coefs <- unlist(lapply(1:B, function(b) weight[b] * (1 / mb[b]) * coeflist[[b]][2, ]),
+                      use.names = FALSE)
+    Ax_parts[[length(Ax_parts) + 1L]] <- t_coefs
   }
 
   ## Add -1 coefficient for eta_h in each test statistic constraint
-  Ai <- c(Ai, (B + 2):(B + 1 + H))
-  Aj <- c(Aj, (nn + 1):(nn + H))
-  Ax <- c(Ax, rep(-1, H))
+  Ai_parts[[length(Ai_parts) + 1L]] <- (B + 2):(B + 1 + H)
+  Aj_parts[[length(Aj_parts) + 1L]] <- (nn + 1):(nn + H)
+  Ax_parts[[length(Ax_parts) + 1L]] <- rep(-1, H)
 
   ## 4. Normalization constraints: theta - (1/sigma_h)*mu_h - eta_h <= 0 (H constraints)
   mu <- ms_list$mu
   sig_rev <- 1 / ms_list$sigma
 
   ## theta coefficient (-1) in each normalization constraint
-  Ai <- c(Ai, (B + H + 2):(B + 2 * H + 1))
-  Aj <- c(Aj, rep(n_vars, H))
-  Ax <- c(Ax, rep(-1, H))
+  Ai_parts[[length(Ai_parts) + 1L]] <- (B + H + 2):(B + 2 * H + 1)
+  Aj_parts[[length(Aj_parts) + 1L]] <- rep(n_vars, H)
+  Ax_parts[[length(Ax_parts) + 1L]] <- rep(-1, H)
 
   ## eta_h coefficient (1/sigma_h) in each normalization constraint
-  Ai <- c(Ai, (B + H + 2):(B + 2 * H + 1))
-  Aj <- c(Aj, (nn + 1):(nn + H))
-  Ax <- c(Ax, sig_rev)
+  Ai_parts[[length(Ai_parts) + 1L]] <- (B + H + 2):(B + 2 * H + 1)
+  Aj_parts[[length(Aj_parts) + 1L]] <- (nn + 1):(nn + H)
+  Ax_parts[[length(Ax_parts) + 1L]] <- sig_rev
+
+  Ai <- unlist(Ai_parts, use.names = FALSE)
+  Aj <- unlist(Aj_parts, use.names = FALSE)
+  Ax <- unlist(Ax_parts, use.names = FALSE)
 
   ## Create sparse constraint matrix
   n_constraints <- B + 1 + H + H
@@ -317,43 +316,43 @@ Gurobi_sol_com <- function(Z, block, weight, coeflists, p, ms_list, exact = TRUE
   Q[nn + H + 1] <- 1
 
   ## sum of x in each strata is 1
-  Ai <- rep(1:B, mmb)
-  Aj <- 1:nn
-  x <- rep(1, nn)
+  Ai_parts <- list(rep(1:B, mmb))
+  Aj_parts <- list(1:nn)
+  x_parts <- list(rep(1, nn))
 
   # cost is p for all choices of stat and profit for h's stat is eta'h
 
   ## choosing x_{sj} for each stratum s, where x_{sj}=1 if and only if j units in this stratum have effects greater than c
-  Ai <- c(Ai, rep((B + 1), nn))
-  Aj <- c(Aj, (1:nn))
+  Ai_parts[[length(Ai_parts) + 1L]] <- rep((B + 1), nn)
+  Aj_parts[[length(Aj_parts) + 1L]] <- 1:nn
   coeflist <- coeflists[[1]]
-  for (i in 1:B) {
-    x <- c(x, coeflist[[i]][1, ])
-  }
+  x_parts[[length(x_parts) + 1L]] <- unlist(lapply(coeflist, function(mat) mat[1, ]), use.names = FALSE)
 
   ## listing t_s^h(j)s
   for (h in 1:H) {
     coeflist <- coeflists[[h]]
-    Ai <- c(Ai, rep(B + 1 + h, nn))
-    Aj <- c(Aj, (1:nn))
-    for (b in 1:B) {
-      x <- c(x, weight[b] * (1 / mb[b]) * coeflist[[b]][2, ])
-    }
+    Ai_parts[[length(Ai_parts) + 1L]] <- rep(B + 1 + h, nn)
+    Aj_parts[[length(Aj_parts) + 1L]] <- 1:nn
+    x_parts[[length(x_parts) + 1L]] <- unlist(lapply(1:B, function(b) weight[b] * (1 / mb[b]) * coeflist[[b]][2, ]),
+                                       use.names = FALSE)
   }
 
-
-  Ai <- c(Ai, (B + 1 + 1):(B + 1 + H))
-  Aj <- c(Aj, (nn + 1):(nn + H))
-  x <- c(x, rep(-1, H))
+  Ai_parts[[length(Ai_parts) + 1L]] <- (B + 1 + 1):(B + 1 + H)
+  Aj_parts[[length(Aj_parts) + 1L]] <- (nn + 1):(nn + H)
+  x_parts[[length(x_parts) + 1L]] <- rep(-1, H)
 
   mu <- ms_list$mu
   sig_rev <- 1 / ms_list$sigma
 
   ## for final constraints
 
-  Ai <- c(Ai, rep((B + H + 1 + 1):(B + 2 * H + 1), 2))
-  Aj <- c(Aj, rep(nn + H + 1, H), (nn + 1):(nn + H))
-  x <- c(x, rep(-1, H), sig_rev)
+  Ai_parts[[length(Ai_parts) + 1L]] <- rep((B + H + 1 + 1):(B + 2 * H + 1), 2)
+  Aj_parts[[length(Aj_parts) + 1L]] <- c(rep(nn + H + 1, H), (nn + 1):(nn + H))
+  x_parts[[length(x_parts) + 1L]] <- c(rep(-1, H), sig_rev)
+
+  Ai <- unlist(Ai_parts, use.names = FALSE)
+  Aj <- unlist(Aj_parts, use.names = FALSE)
+  x <- unlist(x_parts, use.names = FALSE)
 
   A <- Matrix::sparseMatrix(Ai, Aj, x = x)
 
@@ -532,14 +531,9 @@ Gurobi_sol_stratum_com <- function(coeflist, p, exact = TRUE) {
   }
 
   model <- list()
-  Q <- NULL
   B <- length(coeflist)
-  nb <- vector(length = B)
-
-  for (i in 1:B) {
-    Q <- c(Q, coeflist[[i]][2, ])
-    nb[i] <- ncol(coeflist[[i]])
-  }
+  nb <- vapply(coeflist, ncol, integer(1))
+  Q <- unlist(lapply(coeflist, function(mat) mat[2, ]), use.names = FALSE)
 
   n <- length(Q)
   indx <- c(0, cumsum(nb))
@@ -593,12 +587,11 @@ HiGHS_sol_stratum_com <- function(coeflist, p, exact = TRUE) {
   B <- length(coeflist)
   nb <- vector(length = B)
 
-  # Build objective vector from test statistics
-  Q <- NULL
   for (i in 1:B) {
-    Q <- c(Q, coeflist[[i]][2, ])
     nb[i] <- ncol(coeflist[[i]])
   }
+  # Build objective vector from test statistics
+  Q <- unlist(lapply(coeflist, function(mat) mat[2, ]), use.names = FALSE)
 
   n <- length(Q)
 

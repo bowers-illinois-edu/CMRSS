@@ -84,29 +84,29 @@ assign_CRE <- function(n, m, nperm){
 rank_score <- function(n, method.list = list(name = "Polynomial", r, std = TRUE, scale = FALSE) ){
   if(method.list$name == "Polynomial"){
     r = method.list$r
-    if(method.list$std == TRUE) {
+    if(isTRUE(method.list$std)) {
       #      score = (c(1:n) / n)^(r-1)
       score = (c(1:n) / (n + 1) )^(r-1)  # changed
     } else {
       score = (c(1:n))^(r-1)
     }
-    if(method.list$scale == TRUE){
-      score = scale(score) # normalized score; corresponds to 11p of the draft
+    if(isTRUE(method.list$scale)){
+      score = as.numeric(scale(score)) # normalized score; corresponds to 11p of the draft
     }
   }
   if(method.list$name == "Stephenson"){
     score = choose( c(1:n) - 1, method.list$s - 1)
-    if(method.list$scale == TRUE){
-      score = scale(score)
+    if(isTRUE(method.list$scale)){
+      score = as.numeric(scale(score))
     }
   }
   if(method.list$name == "Wilcoxon"){
     score = c(1:n)
-    if(method.list$scale == TRUE){
-      score = scale(score)
+    if(isTRUE(method.list$scale)){
+      score = as.numeric(scale(score))
     }
   }
-  return(score)
+  return(as.numeric(score))
 }
 
 
@@ -122,24 +122,42 @@ rank_score <- function(n, method.list = list(name = "Polynomial", r, std = TRUE,
 #' @param score Optional pre-computed score vector.
 #' @param nperm Number of permutations.
 #' @param Z.perm Optional pre-computed permutation matrix.
+#' @param chunk_size Integer chunk size used to generate permutations when
+#'   \code{Z.perm} is \code{NULL}. Smaller values use less memory.
 #'
 #' @return A numeric vector of length nperm containing the null distribution.
 #'
 #' @keywords internal
 null_dist <- function(n, m, method.list = NULL, score = NULL,
-                      nperm = 10^5, Z.perm = NULL){
+                      nperm = 10^5, Z.perm = NULL, chunk_size = 1000){
   if(is.null(score)){
     score = rank_score( n, method.list )
   }
+  score = as.numeric(score)
 
-  if(is.null(Z.perm)){
-    Z.perm = assign_CRE(n, m, nperm)
-    nperm = ncol(Z.perm)
+  if(!is.null(Z.perm)){
+    return(as.vector(crossprod(score, Z.perm)))
   }
 
-  # Vectorized: compute all permutation statistics in one matrix operation
-  # For each column of Z.perm, sum the scores where Z.perm == 1
-  stat.null = as.vector(crossprod(score, Z.perm))
+  if(!is.finite(nperm)){
+    Z.perm = assign_CRE(n, m, nperm)
+    return(as.vector(crossprod(score, Z.perm)))
+  }
+
+  if(m == 0){
+    return(rep(0, nperm))
+  }
+  if(m == n){
+    return(rep(sum(score), nperm))
+  }
+
+  stat.null = numeric(nperm)
+  chunk_size = max(1L, as.integer(chunk_size))
+  for(offset in seq.int(1L, nperm, by = chunk_size)){
+    size = min(chunk_size, nperm - offset + 1L)
+    indices = replicate(size, sample.int(n, m, replace = FALSE), simplify = "matrix")
+    stat.null[offset:(offset + size - 1L)] = colSums(matrix(score[as.vector(indices)], nrow = m))
+  }
 
   return(stat.null)
 }
@@ -154,20 +172,57 @@ null_dist <- function(n, m, method.list = NULL, score = NULL,
 #' @param methods.list A list of method specifications.
 #' @param nperm Number of permutations.
 #' @param Z.perm Optional pre-computed permutation matrix.
+#' @param chunk_size Integer chunk size used to generate permutations when
+#'   \code{Z.perm} is \code{NULL}. Smaller values use less memory.
 #'
 #' @return An H x nperm matrix where H is the number of statistics.
 #'
 #' @keywords internal
-null_dist_multiple <- function(n, m, methods.list = NULL, nperm = 10^5, Z.perm = NULL){
-  if(is.null(Z.perm)){
-    Z.perm = assign_CRE(n, m, nperm)
+null_dist_multiple <- function(n, m, methods.list = NULL, nperm = 10^5, Z.perm = NULL, chunk_size = 1000){
+  H = length(methods.list)
+
+  if(!is.null(Z.perm)){
     nperm = ncol(Z.perm)
+    stat.null.mult = matrix(NA, nrow = H, ncol = nperm)
+    for(h in 1:H){
+      stat.null.mult[h, ] = null_dist(n, m, method.list = methods.list[[h]], score = NULL, nperm = nperm, Z.perm = Z.perm)
+    }
+    return(stat.null.mult)
   }
 
-  H = length(methods.list)
+  if(!is.finite(nperm)){
+    Z.perm = assign_CRE(n, m, nperm)
+    stat.null.mult = matrix(NA, nrow = H, ncol = ncol(Z.perm))
+    for(h in 1:H){
+      score = rank_score(n, methods.list[[h]])
+      stat.null.mult[h, ] = as.vector(crossprod(score, Z.perm))
+    }
+    return(stat.null.mult)
+  }
+
+  if(m == 0){
+    return(matrix(0, nrow = H, ncol = nperm))
+  }
+  if(m == n){
+    result = matrix(NA, nrow = H, ncol = nperm)
+    for(h in 1:H){
+      score = as.numeric(rank_score(n, methods.list[[h]]))
+      result[h, ] = rep(sum(score), nperm)
+    }
+    return(result)
+  }
+
+  scores = lapply(methods.list, function(method.list) rank_score(n, method.list))
+  scores = lapply(scores, as.numeric)
   stat.null.mult = matrix(NA, nrow = H, ncol = nperm)
-  for(h in 1:H){
-    stat.null.mult[h, ] = null_dist(n, m, method.list = methods.list[[h]], score = NULL, nperm = nperm, Z.perm = Z.perm)
+
+  chunk_size = max(1L, as.integer(chunk_size))
+  for(offset in seq.int(1L, nperm, by = chunk_size)){
+    size = min(chunk_size, nperm - offset + 1L)
+    indices = replicate(size, sample.int(n, m, replace = FALSE), simplify = "matrix")
+    for(h in 1:H){
+      stat.null.mult[h, offset:(offset + size - 1L)] = colSums(matrix(scores[[h]][as.vector(indices)], nrow = m))
+    }
   }
 
   return(stat.null.mult)
@@ -259,8 +314,7 @@ pval_cre <- function(Z, Y, k, c,
 
   # emp null dist #
   if(is.null(stat.null)){
-    if(is.null(Z.perm)){
-      Z.perm = assign_CRE(n, m, nperm)
+    if(!is.null(Z.perm)){
       nperm = ncol(Z.perm)
     }
     stat.null = null_dist(n, m, score = score, nperm = nperm, Z.perm = Z.perm, method.list = method.list )
@@ -297,9 +351,6 @@ comb_null_dist_cre = function(n, m, methods.list, Z.perm = NULL, nperm = 10^4, s
   H = length(methods.list)
 
   if(is.null(stat.null.mult)){
-    if(is.null(Z.perm)){
-      Z.perm = assign_CRE(n, m, nperm)
-    }
     stat.null.mult = null_dist_multiple(n, m, methods.list, nperm, Z.perm)
   }
 
@@ -337,9 +388,6 @@ min_p_multiple_rank_sum <- function(Z, Y, k, c, methods.list, Z.perm = NULL, npe
   m = sum(Z)
   
   if(is.null(stat.null.mult)){
-    if(is.null(Z.perm)){
-      Z.perm = assign_CRE(n, m, nperm)
-    }
     stat.null.mult = null_dist_multiple(n, m, methods.list, nperm, Z.perm)
   }
 
@@ -418,9 +466,6 @@ comb_p_val_cre = function(Z, Y, k, c, methods.list,
   m = sum(Z)
 
   if(is.null(stat.null.mult)){
-    if(is.null(Z.perm)){
-      Z.perm = assign_CRE(n, m, nperm)
-    }
     stat.null.mult = null_dist_multiple(n, m, methods.list, nperm, Z.perm)
   }
 
@@ -462,9 +507,7 @@ com_conf_quant_larger_trt <- function( Z, Y, methods.list = NULL,
 
   # emp null dist #
   # XL: I add the following
-  if(is.null(Z.perm)){
-    Z.perm = assign_CRE(n, m, nperm)
-  }else{
+  if(!is.null(Z.perm)){
     nperm = ncol(Z.perm)
   }
 
@@ -689,9 +732,6 @@ com_conf_quant_larger_cre <- function( Z, Y, methods.list,
 
   H = length(methods.list)
   n = length(Z)
-  if(is.null(Z.perm)){
-    Z.perm = assign_CRE(n, m=sum(Z), nperm)
-  }
 
   # prediction intervals for effect quantiles among treated units
   if(set == "treat"){

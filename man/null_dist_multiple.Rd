@@ -4,7 +4,14 @@
 \alias{null_dist_multiple}
 \title{Generate null distributions for multiple rank sum statistics}
 \usage{
-null_dist_multiple(n, m, methods.list = NULL, nperm = 10^5, Z.perm = NULL)
+null_dist_multiple(
+  n,
+  m,
+  methods.list = NULL,
+  nperm = 10^5,
+  Z.perm = NULL,
+  chunk_size = 1000
+)
 }
 \arguments{
 \item{n}{Total number of units.}
@@ -16,6 +23,9 @@ null_dist_multiple(n, m, methods.list = NULL, nperm = 10^5, Z.perm = NULL)
 \item{nperm}{Number of permutations.}
 
 \item{Z.perm}{Optional pre-computed permutation matrix.}
+
+\item{chunk_size}{Integer chunk size used to generate permutations when
+\code{Z.perm} is \code{NULL}. Smaller values use less memory.}
 }
 \value{
 An H x nperm matrix where H is the number of statistics.

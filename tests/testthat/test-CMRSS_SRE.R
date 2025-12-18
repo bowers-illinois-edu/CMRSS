@@ -47,6 +47,89 @@ test_that("assign_block generates valid block-randomized permutations", {
   expect_true(all(colSums(z_perm) == sum(Z)))
 })
 
+test_that(".generate_Z_chunk_block generates valid block-randomized chunks", {
+  set.seed(101)
+
+  n <- 50
+  block <- factor(sample(letters[1:10], n, replace = TRUE))
+  Z <- sample(c(rep(1, 25), rep(0, 25)))
+
+  block_sum <- CMRSS:::summary_block(Z, block)
+  size <- 200
+  z_chunk <- CMRSS:::.generate_Z_chunk_block(block_sum$units.block, block_sum$mb, n, size)
+
+  expect_equal(dim(z_chunk), c(n, size))
+  expect_true(all(z_chunk %in% c(0, 1)))
+
+  for (i in 1:block_sum$B) {
+    block_sums <- colSums(z_chunk[block_sum$units.block[[i]], , drop = FALSE])
+    expect_true(all(block_sums == block_sum$mb[i]))
+  }
+
+  expect_true(all(colSums(z_chunk) == sum(Z)))
+})
+
+test_that("com_null_dist_block_stratum matches naive computation for fixed Z.perm", {
+  set.seed(202)
+
+  block <- factor(rep(1:3, each = 4))
+  n <- length(block)
+  Z <- c(1, 1, 0, 0,
+         1, 0, 1, 0,
+         0, 1, 1, 0)
+
+  block_sum <- CMRSS:::summary_block(Z, block)
+  weight <- block_sum$mb
+
+  r.vec <- c(2, 3, 6)
+  methods.list.all <- lapply(r.vec, function(r) {
+    lapply(1:block_sum$B, function(i) list(name = "Polynomial", r = r, std = TRUE, scale = FALSE))
+  })
+
+  scores.list.all <- lapply(methods.list.all, function(method.list.all) {
+    CMRSS:::score_all_blocks(block_sum$nb, method.list.all)
+  })
+
+  mu_sd_block_list <- CMRSS:::mu_sd_block(Z, block, methods.list.all, scores.list.all, weight, block_sum)
+
+  null_max <- 200
+  Z.perm <- CMRSS:::assign_block(block_sum, null_max)
+
+  fast <- CMRSS:::com_null_dist_block_stratum(
+    Z, block, methods.list.all,
+    scores.list.all = scores.list.all,
+    mu_sd_block_list = mu_sd_block_list,
+    null.max = null_max,
+    weight = weight,
+    block.sum = block_sum,
+    Z.perm = Z.perm,
+    chunk_size = 37
+  )
+
+  H <- length(methods.list.all)
+  B <- block_sum$B
+  naive <- numeric(null_max)
+  for (iter in 1:null_max) {
+    total <- 0
+    for (b in 1:B) {
+      units <- block_sum$units.block[[b]]
+      Zb <- Z.perm[units, iter]
+      mb <- block_sum$mb[b]
+      vals <- numeric(H)
+      for (h in 1:H) {
+        score_bh <- scores.list.all[[h]][[b]]
+        mu <- mu_sd_block_list$mu_list[[b]][h]
+        sd <- mu_sd_block_list$sig_list[[b]][h]
+        vals[h] <- ((sum(score_bh * Zb) / mb) - mu) / sd
+      }
+      total <- total + weight[b] * max(vals)
+    }
+    naive[iter] <- total
+  }
+
+  expect_equal(fast, naive)
+})
+
 
 # API function tests
 

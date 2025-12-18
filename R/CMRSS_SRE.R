@@ -25,14 +25,10 @@ summary_block <- function(Z, block){
   B = length(block.levels)
   
   # number of treated and control within each block
-  nb = rep(NA, B)
-  mb = rep(NA, B)
-  units.block = list()
-  for(i in 1 : B){
-    units.block[[i]] = which(block == block.levels[i])
-    nb[i] = length(units.block[[i]])
-    mb[i] = sum(Z[units.block[[i]]])
-  }
+  units.block = split(seq_along(block), block)
+  nb = unname(vapply(units.block, length, integer(1)))
+  mb = unname(vapply(units.block, function(idx) sum(Z[idx]), numeric(1)))
+  units.block = unname(units.block)
   mb_ctrl = nb - mb
   
   result = list(block=block, B = B, nb = nb, mb = mb, mb_ctrl = mb_ctrl, units.block = units.block, block.levels = block.levels )
@@ -74,6 +70,69 @@ assign_block <- function(block.sum, null.max = 10^4){
   }
 
   return(Z.perm)
+}
+
+# Internal helper: generate a chunk of block-randomized assignments without
+# materializing the full n x null.max permutation matrix.
+.generate_Z_chunk_block <- function(units.block, mb, n, size, combo_cache = NULL, max_ncomb = 1e5){
+  B = length(units.block)
+  Z.chunk = matrix(0L, nrow = n, ncol = size)
+
+  if(is.null(combo_cache)){
+    combo_cache = new.env(parent = emptyenv())
+  }
+
+  for(i in 1:B){
+    units = units.block[[i]]
+    nbi = length(units)
+    mi = as.integer(mb[i])
+
+    if(mi <= 0L){
+      next
+    }
+    if(mi >= nbi){
+      Z.chunk[units, ] = 1L
+      next
+    }
+
+    if(mi == 1L){
+      treated = sample.int(nbi, size, replace = TRUE)
+      Z.chunk[cbind(units[treated], seq_len(size))] = 1L
+      next
+    }
+    if(mi == (nbi - 1L)){
+      Z.chunk[units, ] = 1L
+      ctrl = sample.int(nbi, size, replace = TRUE)
+      Z.chunk[cbind(units[ctrl], seq_len(size))] = 0L
+      next
+    }
+
+    key = paste0(nbi, ":", mi)
+    comb = NULL
+    if(exists(key, envir = combo_cache, inherits = FALSE)){
+      comb = get(key, envir = combo_cache, inherits = FALSE)
+    } else {
+      log_ncomb = lchoose(nbi, mi)
+      if(is.finite(log_ncomb) && log_ncomb <= log(max_ncomb)){
+        comb = utils::combn(nbi, mi)
+        assign(key, comb, envir = combo_cache)
+      }
+    }
+
+    if(!is.null(comb)){
+      ncomb = ncol(comb)
+      picks = sample.int(ncomb, size, replace = TRUE)
+      idx = comb[, picks, drop = FALSE]
+    } else {
+      idx = replicate(size, sample.int(nbi, mi, replace = FALSE), simplify = "matrix")
+    }
+
+    row_idx = units[as.vector(idx)]
+    col_idx = rep(seq_len(size), each = mi)
+    Z.chunk[cbind(row_idx, col_idx)] = 1L
+  }
+
+  return(Z.chunk)
 }
 
 #' Compute block weights
@@ -259,6 +318,8 @@ mu_sigma_single_weight_strat_rank_sum_stat <- function(Z, block,
 #' @param weight A B-dimensional vector of block weights.
 #' @param block.sum Optional pre-computed block summary.
 #' @param Z.perm Optional pre-computed permutation matrix.
+#' @param chunk_size Optional number of permutations per chunk when
+#'   \code{Z.perm} is \code{NULL}. If \code{NULL}, chosen adaptively based on \code{n}.
 #'
 #' @return A numeric vector of the null distribution (length null.max).
 #'
@@ -269,7 +330,8 @@ com_null_dist_block <- function(Z, block,
                                 null.max = 10^4,
                                 weight,
                                 block.sum = NULL,
-                                Z.perm = NULL){
+                                Z.perm = NULL,
+                                chunk_size = NULL){
 
   n = length(Z)
   H = length(methods.list.all)
@@ -306,37 +368,46 @@ com_null_dist_block <- function(Z, block,
   }
 
   ## generating random assignment vector corresponding to given block structure
-  if(is.null(Z.perm)){
-    Z.perm = assign_block(block.sum, null.max)
-  }
-
   # Vectorized computation of test statistics
-  # Key insight: Y = 1:n, so ranks within each block are fixed.
-  # We pre-compute weighted reordered scores, then use matrix multiplication.
-
-  Y = c(1:n)
+  # Key insight: for the null distribution we can take Y = 1:n, so within-block
+  # ranks are fixed. Pre-compute weighted rank scores per unit, then use
+  # matrix multiplication against permuted assignment matrices.
 
   # Pre-compute reordered scores for each method (n x H matrix)
   reordered_scores = matrix(0, nrow = n, ncol = H)
   for(h in 1:H){
     score.list.all = scores.list.all[[h]]
     for(i in 1:B){
-      ys = Y[units.block[[i]]]
-      ranks_in_block = rank(ys, ties.method = "first")
-      score = score.list.all[[i]]
-      # Weighted score contribution for this block
-      reordered_scores[units.block[[i]], h] = weight[i] / mb[i] * score[ranks_in_block]
+      if(mb[i] == 0){
+        next
+      }
+      units = units.block[[i]]
+      reordered_scores[units, h] = weight[i] / mb[i] * score.list.all[[i]]
     }
   }
 
-  # Compute all test statistics using matrix multiplication
-  # test.stat.raw[h, iter] = sum(reordered_scores[, h] * Z.perm[, iter])
-  test.stat.raw = crossprod(reordered_scores, Z.perm)  # H x null.max matrix
+  if(!is.null(Z.perm)){
+    test.stat.raw = crossprod(reordered_scores, Z.perm)
+    test.stat.all = (test.stat.raw - mu_vec) / sig_vec
+    return(apply(test.stat.all, 2, max))
+  }
 
-  # Normalize: (raw - mu) / sigma
-  test.stat.all = (test.stat.raw - mu_vec) / sig_vec  # broadcasting over columns
+  if(is.null(chunk_size)){
+    # Target ~5e6 entries per chunk for the n x chunk assignment matrix
+    chunk_size = max(1L, min(null.max, as.integer(floor(5e6 / n))))
+  }
+  chunk_size = max(1L, min(null.max, as.integer(chunk_size)))
 
-  test.stat.max = apply(test.stat.all, 2, max)
+  combo_cache = new.env(parent = emptyenv())
+  test.stat.max = numeric(null.max)
+  for(offset in seq.int(1L, null.max, by = chunk_size)){
+    size = min(chunk_size, null.max - offset + 1L)
+    Z.chunk = .generate_Z_chunk_block(units.block = units.block, mb = mb, n = n, size = size, combo_cache = combo_cache)
+    test.stat.raw = crossprod(reordered_scores, Z.chunk)
+    test.stat.all = (test.stat.raw - mu_vec) / sig_vec
+    test.stat.max[offset:(offset + size - 1L)] = apply(test.stat.all, 2, max)
+  }
+
   return(test.stat.max)
 }
 
@@ -752,6 +823,8 @@ single_weight_max_rank_sum_stat_stratum <- function(Z, Y,
 #' @param weight A B-dimensional vector of block weights.
 #' @param block.sum Optional pre-computed block summary.
 #' @param Z.perm Optional pre-computed permutation matrix.
+#' @param chunk_size Optional number of permutations per chunk when
+#'   \code{Z.perm} is \code{NULL}. If \code{NULL}, chosen adaptively based on \code{n}.
 #'
 #' @return A numeric vector of the null distribution (length null.max).
 #'
@@ -760,7 +833,8 @@ com_null_dist_block_stratum <- function(Z, block, methods.list.all,
                                         scores.list.all = NULL,
                                         mu_sd_block_list = NULL,
                                         null.max = 10^4, weight,
-                                        block.sum = NULL, Z.perm = NULL){
+                                        block.sum = NULL, Z.perm = NULL,
+                                        chunk_size = NULL){
 
   H = length(methods.list.all)
   n = length(Z)
@@ -789,39 +863,56 @@ com_null_dist_block_stratum <- function(Z, block, methods.list.all,
     mu_sd_block_list = mu_sd_block(Z, block, methods.list.all, scores.list.all, weight, block.sum)
   }
 
-
-  # generating random assignment vector corresponding to given block structure
-  if(is.null(Z.perm)){
-    Z.perm = assign_block(block.sum, null.max)
+  if(!is.null(Z.perm)){
+    null.max = ncol(Z.perm)
   }
 
   stat.null = rep(NA, null.max)
-  Y = c(1:n)  # fixed outcome vector for null distribution
 
-
-  for(iter in 1 : null.max){
-    Z.tmp = Z.perm[, iter]
-    result = 0
-    for(b in 1 : B){
-      mu_vec = mu_sd_block_list$mu_list[[b]]
-      sig_vec = mu_sd_block_list$sig_list[[b]]
-      Z.tmp.b = Z.tmp[block == block.levels[[b]] ]
-      Y.tmp.b = Y[block == block.levels[[b]] ]
-      weight.b = weight[b]
-      # specifying list of methods for each block
-      methods.list.b = list()
-      for(h in 1 : H){
-        methods.list.b[[h]] = methods.list.all[[h]][[b]]
-      }
-      result = result + single_weight_max_rank_sum_stat_stratum(Z = Z.tmp.b,
-                                                                Y = Y.tmp.b,
-                                                                methods.list = methods.list.b,
-                                                                mu_vec = mu_vec,
-                                                                sig_vec = sig_vec,
-                                                                weight.b = weight.b)
+  methods.list.by.block = list()
+  for(b in 1:B){
+    methods.list.b = list()
+    for(h in 1:H){
+      methods.list.b[[h]] = methods.list.all[[h]][[b]]
     }
-    stat.null[iter] = result
+    methods.list.by.block[[b]] = methods.list.b
   }
+
+  score_mat.by.block = list()
+  for(b in 1:B){
+    score_mat.by.block[[b]] = do.call(cbind, lapply(1:H, function(h) scores.list.all[[h]][[b]]))
+  }
+
+  if(is.null(chunk_size)){
+    chunk_size = max(1L, min(null.max, as.integer(floor(5e6 / n))))
+  }
+  chunk_size = max(1L, min(null.max, as.integer(chunk_size)))
+
+  combo_cache = new.env(parent = emptyenv())
+  for(offset in seq.int(1L, null.max, by = chunk_size)){
+    size = min(chunk_size, null.max - offset + 1L)
+    if(!is.null(Z.perm)){
+      Z.chunk = Z.perm[, offset:(offset + size - 1L), drop = FALSE]
+    } else {
+      Z.chunk = .generate_Z_chunk_block(units.block = units.block, mb = mb, n = n, size = size, combo_cache = combo_cache)
+    }
+
+    result = numeric(size)
+    for(b in 1:B){
+      if(mb[b] == 0){
+        next
+      }
+      units = units.block[[b]]
+      Z.block = Z.chunk[units, , drop = FALSE]
+      raw = crossprod(score_mat.by.block[[b]], Z.block) # H x size
+      stat = raw / mb[b]
+      stat = (stat - mu_sd_block_list$mu_list[[b]]) / mu_sd_block_list$sig_list[[b]]
+      result = result + weight[b] * apply(stat, 2, max)
+    }
+
+    stat.null[offset:(offset + size - 1L)] = result
+  }
+
   return(stat.null)
 }
 
@@ -1388,5 +1479,3 @@ com_block_conf_quant_larger <- function(Z, Y,
     return(ci.all)
   }
 }
-
-

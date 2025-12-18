@@ -347,17 +347,16 @@ ci_lower_quantile_generalize <- function(Z, Y, N, k_vec = ceiling(c(0.6, 0.7, 0.
                                  nperm = nperm, Z.perm = Z.perm,
                                  set = set, alpha.ratio.treat = alpha.ratio.treat, tol = tol)
   } else {
-    res <- NULL
-    for (k in k_vec) {
-      res <- rbind(res,
-                   ci_lower_quantile_gen(Z = Z, Y = Y, N = N, K.vec = c(k),
-                                         alpha = alpha, gamma = gamma, ndraw = ndraw,
-                                         treat.method.list = treat.method.list,
-                                         control.method.list = control.method.list,
-                                         score = score, stat.null = stat.null,
-                                         nperm = nperm, Z.perm = Z.perm,
-                                         set = set, alpha.ratio.treat = alpha.ratio.treat, tol = tol))
-    }
+    res_list <- lapply(k_vec, function(k) {
+      ci_lower_quantile_gen(Z = Z, Y = Y, N = N, K.vec = c(k),
+                            alpha = alpha, gamma = gamma, ndraw = ndraw,
+                            treat.method.list = treat.method.list,
+                            control.method.list = control.method.list,
+                            score = score, stat.null = stat.null,
+                            nperm = nperm, Z.perm = Z.perm,
+                            set = set, alpha.ratio.treat = alpha.ratio.treat, tol = tol)
+    })
+    res <- do.call(rbind, res_list)
   }
   return(res)
 }
