@@ -23,16 +23,16 @@ summary_block <- function(Z, block){
   }
   block.levels = levels(block)
   B = length(block.levels)
-  
+
   # number of treated and control within each block
   units.block = split(seq_along(block), block)
   nb = unname(vapply(units.block, length, integer(1)))
   mb = unname(vapply(units.block, function(idx) sum(Z[idx]), numeric(1)))
   units.block = unname(units.block)
   mb_ctrl = nb - mb
-  
+
   result = list(block=block, B = B, nb = nb, mb = mb, mb_ctrl = mb_ctrl, units.block = units.block, block.levels = block.levels )
-  
+
   return(result)
 }
 
@@ -152,16 +152,16 @@ weight_scheme <- function(block.sum, weight.name = "asymp.opt"){
   nb = block.sum$nb
   mb = block.sum$mb
   mb_ctrl = block.sum$mb_ctrl
-  
+
   weight = rep(NA, B)
-  
+
   if(weight.name == "asymp.opt"){
     weight = mb
   }
   if(weight.name == "dis.free"){
     weight = (nb + 1) / mb_ctrl
   }
-  
+
   return(weight)
 }
 
@@ -204,7 +204,7 @@ score_all_blocks <- function(nb, method.list.all){
 #'
 #' @keywords internal
 single_weight_strat_rank_sum_stat <- function(Z, Y, block, method.list.all, score.list.all = NULL, weight, block.sum = NULL){
-  
+
   if(is.null(block.sum)){
     block.sum = summary_block(Z, block)
   }
@@ -215,19 +215,19 @@ single_weight_strat_rank_sum_stat <- function(Z, Y, block, method.list.all, scor
   mb_ctrl = block.sum$mb_ctrl
   units.block = block.sum$units.block
   block.levels = block.sum$block.levels
-  
+
   if(is.null(score.list.all)){
     score.list.all = score_all_blocks(nb, method.list.all)
   }
-  
+
   result = 0
   for(i in 1 : B){
     score = score.list.all[[i]]
-    
-    
+
+
     zs = Z[units.block[[i]]]
     ys = Y[units.block[[i]]]
-    
+
     stat.block = sum( score[rank(ys, ties.method = "first")[zs == 1] ] )
     result = result + weight[i] * 1 / mb[i] * stat.block
   }
@@ -439,13 +439,13 @@ mu_sigma_list = function(Z, block, weight, methods.list.all, scores.list.all = N
   mb_ctrl = block.sum$mb_ctrl
   units.block = block.sum$units.block
   block.levels = block.sum$block.levels
-  
-  
+
+
   H = length(methods.list.all)
   mu = rep(0, H)
   sigma = rep(0, H)
-  
-  
+
+
   if(is.null(scores.list.all)){
     scores.list.all = list()
     for(h in 1:H){
@@ -453,7 +453,7 @@ mu_sigma_list = function(Z, block, weight, methods.list.all, scores.list.all = N
       scores.list.all[[h]] = score_all_blocks(nb, method.list.all)
     }
   }
-  
+
   for(h in 1:H){
     method.list.all = methods.list.all[[h]]
     score.list.all = scores.list.all[[h]]
@@ -495,12 +495,12 @@ comb_matrix_block <- function(Z, Y, block, c, methods.list.all, scores.list.all 
   mb_ctrl = block.sum$mb_ctrl
   units.block = block.sum$units.block
   block.levels = block.sum$block.levels
-  
+
 
   H = length(methods.list.all)
-  
+
   N = length(Y)
-  
+
   if(is.null(scores.list.all)){
     scores.list.all = list()
     for(h in 1:H){
@@ -508,7 +508,7 @@ comb_matrix_block <- function(Z, Y, block, c, methods.list.all, scores.list.all 
       scores.list.all[[h]] = score_all_blocks(nb, method.list.all)
     }
   }
-  
+
   total.list = list()
   for (l in 1 : H){
     method.list.all = methods.list.all[[l]]
@@ -519,12 +519,12 @@ comb_matrix_block <- function(Z, Y, block, c, methods.list.all, scores.list.all 
       Yb = Y[ units.block[[i]] ]
       Ti = matrix(nrow = 2, ncol = mb[i] + 1)
       Ti[1,] = 0:mb[i]
-      
+
       for(ii in 0 : mb[i]){
-        
+
         method.list = method.list.all[[i]]
         score = score.list.all[[i]]
-        
+
         Ti[2, ii + 1] = min_stat(Zb, Yb, nb[i] - ii, c, method.list = method.list, score = score)
       }
       Tlist[[i]] = Ti
@@ -1029,7 +1029,9 @@ pval_comb_block <- function(Z, Y, k, c,
 
   H <- length(methods.list.all)
   N <- length(Y)
-  p <- N - k
+  m <- sum(Z)
+  # p <- N - k
+  p <- m - k
 
   block.sum <- summary_block(Z, block)
   block <- block.sum$block
