@@ -1,0 +1,147 @@
+# Simultaneous lower bounds using multiple rank sum statistics in CRE
+
+Computes simultaneous confidence/prediction intervals for quantiles of
+individual treatment effects in completely randomized experiments (CRE)
+by combining multiple rank sum statistics.
+
+## Usage
+
+``` r
+com_conf_quant_larger_cre(
+  Z,
+  Y,
+  methods.list,
+  nperm = 10^4,
+  set = "treat",
+  Z.perm = NULL,
+  alpha = 0.05,
+  tol = 10^(-3)
+)
+```
+
+## Arguments
+
+- Z:
+
+  An \\n\\ dimensional treatment assignment vector (1 = treated, 0 =
+  control).
+
+- Y:
+
+  An \\n\\ dimensional observed outcome vector.
+
+- methods.list:
+
+  A list of lists specifying the choice of multiple rank sum test
+  statistics. Each element should be a list with:
+
+  - `name`: "Wilcoxon", "Stephenson", or "Polynomial"
+
+  - `s`: (for Stephenson) parameter s controlling sensitivity to upper
+    ranks
+
+  - `r`: (for Polynomial) power parameter
+
+  - `std`: (for Polynomial) logical, use Puri(1965) normalization
+
+  - `scale`: logical, standardize scores to mean 0 and sd 1
+
+- nperm:
+
+  A positive integer representing the number of permutations for
+  approximating the randomization distribution of the rank sum
+  statistic.
+
+- set:
+
+  Set of quantiles of interest:
+
+  - "treat": Prediction intervals for effect quantiles among treated
+    units
+
+  - "control": Prediction intervals for effect quantiles among control
+    units
+
+  - "all": Confidence intervals for all effect quantiles
+
+- Z.perm:
+
+  A \\n \times nperm\\ matrix that specifies the permuted assignments
+  for approximating the null distribution of the test statistic. If
+  NULL, generated automatically.
+
+- alpha:
+
+  A numeric value where 1-alpha indicates the confidence level.
+
+- tol:
+
+  A numeric value specifying the precision of the obtained confidence
+  intervals. For example, if tol = 10^(-3), then the confidence limits
+  are precise up to 3 digits.
+
+## Value
+
+A vector specifying lower limits of prediction (confidence) intervals
+for quantiles k = 1 ~ m (for "treat"), n - m + 1 ~ n (for "control"), or
+1 ~ n (for "all").
+
+## Details
+
+This function implements the combined rank sum test approach for
+inference about quantiles of individual treatment effects. By combining
+multiple rank statistics (e.g., Stephenson statistics with different s
+values), the method can achieve better power across a range of effect
+distributions.
+
+When `set = "all"`, the function combines inference from both treated
+and control units using the approach described in Chen and Li (2024),
+with a Bonferroni-style adjustment (alpha/2 for each direction).
+
+## See also
+
+[`com_block_conf_quant_larger`](https://bowers-illinois-edu.github.io/CMRSS/reference/com_block_conf_quant_larger.md)
+for stratified experiments,
+[`comb_p_val_cre`](https://bowers-illinois-edu.github.io/CMRSS/reference/comb_p_val_cre.md)
+for p-value computation
+
+## Examples
+
+``` r
+if (FALSE) { # \dontrun{
+# Load the electric teachers dataset
+data(electric_teachers)
+
+# Set up treatment and outcome (treating as CRE, ignoring sites)
+Z <- electric_teachers$TxAny
+Y <- electric_teachers$gain
+
+# Define multiple Stephenson statistics with different s values
+# Larger s focuses more on upper ranks (larger treatment effects)
+s.vec <- c(2, 6, 10, 30)
+methods.list <- lapply(s.vec, function(s) {
+  list(name = "Stephenson", s = s, std = TRUE, scale = TRUE)
+})
+
+# Prediction intervals for treated units (90% confidence)
+ci.treat <- com_conf_quant_larger_cre(Z, Y,
+                                      methods.list = methods.list,
+                                      nperm = 10000,
+                                      set = "treat",
+                                      alpha = 0.05)
+
+# Prediction intervals for control units
+ci.control <- com_conf_quant_larger_cre(Z, Y,
+                                        methods.list = methods.list,
+                                        nperm = 10000,
+                                        set = "control",
+                                        alpha = 0.05)
+
+# Confidence intervals for all effect quantiles
+ci.all <- com_conf_quant_larger_cre(Z, Y,
+                                    methods.list = methods.list,
+                                    nperm = 10000,
+                                    set = "all",
+                                    alpha = 0.10)
+} # }
+```
