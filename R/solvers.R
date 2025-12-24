@@ -35,18 +35,19 @@ solver_available <- function(solver) {
 
 #' Get default solver
 #'
-#' Returns the default solver based on availability. Prefers HiGHS if available
-#' as it's open-source, falls back to Gurobi.
+#' Returns the default solver based on availability. Prefers Gurobi if available
+#' (to maintain backward compatibility with earlier versions/workflows), and
+#' falls back to HiGHS.
 #'
 #' @return Character string indicating the available solver
 #' @examples
 #' get_default_solver()
 #' @export
 get_default_solver <- function() {
-  if (solver_available("highs")) {
-    return("highs")
-  } else if (solver_available("gurobi")) {
+  if (solver_available("gurobi")) {
     return("gurobi")
+  } else if (solver_available("highs")) {
+    return("highs")
   } else {
     stop("No solver available. Please install either 'highs' (recommended, open-source) or 'gurobi'.\n",
          "To install highs: install.packages('highs')\n",
@@ -99,7 +100,6 @@ get_default_solver <- function() {
 #' result <- HiGHS_sol_com(Z, block, weight, coeflists, p, ms_list, exact = TRUE)
 #' }
 #' @keywords internal
-#' @importFrom highs highs_solve highs_control
 #' @importFrom Matrix sparseMatrix
 HiGHS_sol_com <- function(Z, block, weight, coeflists, p, ms_list, exact = TRUE, block.sum = NULL) {
 
@@ -277,7 +277,6 @@ HiGHS_sol_com <- function(Z, block, weight, coeflists, p, ms_list, exact = TRUE,
 #' result <- Gurobi_sol_com(Z, block, weight, coeflists, p, ms_list, exact = TRUE)
 #' }
 #' @keywords internal
-#' @importFrom gurobi gurobi
 Gurobi_sol_com <- function(Z, block, weight, coeflists, p, ms_list, exact = TRUE, block.sum = NULL) {
 
   if (!requireNamespace("gurobi", quietly = TRUE)) {
@@ -371,7 +370,7 @@ Gurobi_sol_com <- function(Z, block, weight, coeflists, p, ms_list, exact = TRUE
 
 
   params <- list(OutputFlag = 0)
-  result <- gurobi(model, params)
+  result <- gurobi::gurobi(model, params)
 
   return(list(sol = result$x, obj = result$objval))
 }
@@ -397,7 +396,8 @@ Gurobi_sol_com <- function(Z, block, weight, coeflists, p, ms_list, exact = TRUE
 #'
 #' @details
 #' This function provides a unified interface for both solvers. When solver = "auto",
-#' it will prefer HiGHS if available (as it's open-source), otherwise fall back to Gurobi.
+#' it will prefer Gurobi if available (for backward compatibility), otherwise fall back
+#' to HiGHS.
 #'
 #' Both solvers produce equivalent results for the same optimization problem,
 #' though there may be minor numerical differences (typically < 1e-6) due to
@@ -519,7 +519,6 @@ parse_opt_method <- function(opt.method) {
 #'   \item{obj}{Optimal objective value}
 #'
 #' @seealso \code{\link{HiGHS_sol_stratum_com}} for the HiGHS implementation
-#' @importFrom gurobi gurobi
 #' @keywords internal
 Gurobi_sol_stratum_com <- function(coeflist, p, exact = TRUE) {
 
@@ -556,7 +555,7 @@ Gurobi_sol_stratum_com <- function(coeflist, p, exact = TRUE) {
     model$vtype <- "B"
   }
   params <- list(OutputFlag = 0)
-  result <- gurobi(model, params)
+  result <- gurobi::gurobi(model, params)
   return(list(sol = result$x, obj = result$objval))
 }
 

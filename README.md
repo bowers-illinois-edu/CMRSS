@@ -79,7 +79,7 @@ The `opt.method` parameter controls which optimization solver to use:
 | `"LP_highs"` | Linear programming relaxation with HiGHS |
 | `"ILP_gurobi"` | Integer linear programming with Gurobi |
 | `"LP_gurobi"` | Linear programming relaxation with Gurobi |
-| `"ILP"` or `"ILP_auto"` | Auto-select available solver (prefers HiGHS) |
+| `"ILP"` or `"ILP_auto"` | Auto-select available solver (prefers Gurobi) |
 | `"LP"` or `"LP_auto"` | Auto-select for LP relaxation |
 
 ### Checking Solver Availability

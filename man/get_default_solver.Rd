@@ -10,8 +10,9 @@ get_default_solver()
 Character string indicating the available solver
 }
 \description{
-Returns the default solver based on availability. Prefers HiGHS if available
-as it's open-source, falls back to Gurobi.
+Returns the default solver based on availability. Prefers Gurobi if available
+(to maintain backward compatibility with earlier versions/workflows), and
+falls back to HiGHS.
 }
 \examples{
 get_default_solver()

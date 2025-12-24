@@ -55,7 +55,8 @@ Gurobi or HiGHS solver.
 }
 \details{
 This function provides a unified interface for both solvers. When solver = "auto",
-it will prefer HiGHS if available (as it's open-source), otherwise fall back to Gurobi.
+it will prefer Gurobi if available (for backward compatibility), otherwise fall back
+to HiGHS.
 
 Both solvers produce equivalent results for the same optimization problem,
 though there may be minor numerical differences (typically < 1e-6) due to

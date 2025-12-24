@@ -26,6 +26,12 @@ test_that("parse_opt_method works correctly", {
   expect_error(parse_opt_method("invalid_method"))
 })
 
+test_that("Optional solver packages are not hard imports", {
+  imports <- getNamespaceImports("CMRSS")
+  expect_false("gurobi" %in% names(imports))
+  expect_false("highs" %in% names(imports))
+})
+
 
 test_that("solver_available returns logical", {
   # These should return logical values without errors
