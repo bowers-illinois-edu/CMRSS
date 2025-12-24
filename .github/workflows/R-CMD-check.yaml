@@ -43,7 +43,9 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::rcmdcheck, any::roxygen2, li-xinran/RIQITE
+          packages: local::., any::sessioninfo
+          dependencies: '"hard"'
+          extra-packages: any::rcmdcheck, any::roxygen2, any::testthat, li-xinran/RIQITE
           needs: check
 
       - name: Document package
