@@ -1033,6 +1033,17 @@ pval_comb_block <- function(Z, Y, k, c,
   # p <- N - k
   p <- m - k
 
+  # Validate k against the current LP coverage constraint at line above.
+  # With p = m - k, the LP is feasible only when k is in 1..m; outside this
+  # range the LP is infeasible, the test statistic returns Inf, and the
+  # function previously reported p.value = 0 silently (false rejection).
+  if (!is.numeric(k) || length(k) != 1L || k < 1 || k > m) {
+    stop(sprintf(
+      "k = %s is outside the feasible range 1..sum(Z) = %d for the current LP coverage constraint p = m - k at R/CMRSS_SRE.R:1034.",
+      format(k), m
+    ))
+  }
+
   block.sum <- summary_block(Z, block)
   block <- block.sum$block
 

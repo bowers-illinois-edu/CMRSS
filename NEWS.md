@@ -1,3 +1,14 @@
+# CMRSS 0.2.6
+
+## Bug fixes
+
+- `pval_comb_block()` now validates that `k` lies in `1..sum(Z)` and errors
+  with a clear message otherwise. Previously, `k > sum(Z)` made the LP
+  infeasible and the function silently returned `p.value = 0` with
+  `test.stat = Inf` (a false rejection). The function tests the treated-only
+  hypothesis `H_{k,c}^treat`, so `k` must not exceed the number of treated
+  units.
+
 # CMRSS 0.2.5
 
 ## Performance

@@ -1,7 +1,32 @@
-# HANDOFF: CMRSS paper-vs-code audit (2026-04-26)
+# HANDOFF: CMRSS paper-vs-code audit (2026-04-26, updated 2026-04-28)
 
 A fresh Claude instance picking this up should be able to continue from
 this file alone. Read it top to bottom.
+
+## Update 2026-04-28
+
+Two things happened.
+
+1. **Repo move.** The package's canonical home is now
+   `davidk91919/CMRSS`. `bowers-illinois-edu/CMRSS` was mirror-pushed
+   there, then renamed to `bowers-illinois-edu/CMRSS_archive` (archived,
+   read-only, with an `archive` tag and branch at the pre-move HEAD
+   `f2703fb`). `bowers-illinois-edu/CMRSS` is now a fresh GitHub fork of
+   David's repo. Local clone has `origin` -> the org fork, `upstream` ->
+   David's. Standard fork workflow: branch off `main`, push to `origin`,
+   PR against `upstream/main`.
+
+2. **Item 1A resolved (by David).** David replied: the code at
+   `R/CMRSS_SRE.R:1034` (`p <- m - k`) is correct as-is. The function
+   tests the treated-only hypothesis `H_{k,c}^treat`. The bug is in the
+   documentation -- docstring, example, and any wording that implies
+   "k between 1 and n". David will fix the documentation upstream.
+   On our side: do not edit `R/CMRSS_SRE.R:1034`. The skipped tests in
+   `tests/testthat/test-pval-comb-block-p-convention.R` were written
+   under the all-units assumption and are now stale; they need to be
+   either rewritten to pin the treated-only behavior or deleted once
+   David's doc PR lands. Item 2B (default `comb.method`) is now
+   unblocked.
 
 ## Context and goal
 
