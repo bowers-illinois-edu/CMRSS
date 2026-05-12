@@ -46,7 +46,7 @@ jobs:
         with:
           packages: local::., any::sessioninfo
           dependencies: '"hard"'
-          extra-packages: any::rcmdcheck, any::roxygen2, any::testthat, li-xinran/RIQITE
+          extra-packages: any::rcmdcheck, any::roxygen2, any::testthat, any::highs, li-xinran/RIQITE
           needs: check
 
       - name: Document package
