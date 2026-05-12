@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">CMRSS</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.5</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.6</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -51,8 +51,9 @@
 <hr><div class="section level2">
 <h2 id="priority-1--possible-bugs-investigate-pin-with-tests-fix-if-confirmed">PRIORITY 1 – Possible bugs (investigate; pin with tests; fix if confirmed)<a class="anchor" aria-label="anchor" href="#priority-1--possible-bugs-investigate-pin-with-tests-fix-if-confirmed"></a></h2>
 <div class="section level3">
-<h3 id="id_--1a-reconcile-the-p-convention-in-pval_comb_block-vs-com_block_conf_quant_larger_trt">[ ] 1A. Reconcile the <code>p</code> convention in <code>pval_comb_block</code> vs <code>com_block_conf_quant_larger_trt</code>
-<a class="anchor" aria-label="anchor" href="#id_--1a-reconcile-the-p-convention-in-pval_comb_block-vs-com_block_conf_quant_larger_trt"></a></h3>
+<h3 id="x-1a-reconcile-the-p-convention-in-pval_comb_block-vs-com_block_conf_quant_larger_trt">[x] 1A. Reconcile the <code>p</code> convention in <code>pval_comb_block</code> vs <code>com_block_conf_quant_larger_trt</code>
+<a class="anchor" aria-label="anchor" href="#x-1a-reconcile-the-p-convention-in-pval_comb_block-vs-com_block_conf_quant_larger_trt"></a></h3>
+<p><strong>Resolved 2026-04-28 (by David Kim):</strong> The code at <code>R/CMRSS_SRE.R:1034</code> (<code>p &lt;- m - k</code>) is correct. <code>pval_comb_block</code> tests the treated-only hypothesis <code>H_{k,c}^treat</code>. The bug is in the documentation: the docstring saying “k between 1 and n”, the example using <code>k = floor(0.9 * n)</code>, and any wording that implies all-units. David will fix the documentation upstream (<code>davidk91919/CMRSS</code>). Action on our side: leave <code>R/CMRSS_SRE.R:1034</code> alone; pull David’s doc fix when it lands; rewrite or delete the skipped tests in <code>tests/testthat/test-pval-comb-block-p-convention.R</code> (they were written under the all-units assumption). Item 2B is now unblocked.</p>
 <p>Status update from initial reproducer: <code>pval_comb_block(Z, Y, k=19, c=0, ...)</code> with the existing test inputs (s=3, n=8, m=4 per stratum, total m=12) yields <code>p = m - k = -7</code>, the LP returns “Infeasible,” the test statistic is <code>Inf</code>, and <code>mean(stat.null &gt;= Inf) = 0</code>. So the function silently returns <code>p.value = 0</code> whenever k &gt; m_total. This is a real, consequential bug.</p>
 <ul><li>
 <ol style="list-style-type: lower-alpha"><li>Investigate</li>

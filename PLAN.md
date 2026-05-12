@@ -36,7 +36,18 @@ numerical results (1A, 1B, 2A, 2B).
 
 ## PRIORITY 1 – Possible bugs (investigate; pin with tests; fix if confirmed)
 
-### \[ \] 1A. Reconcile the `p` convention in `pval_comb_block` vs `com_block_conf_quant_larger_trt`
+### \[x\] 1A. Reconcile the `p` convention in `pval_comb_block` vs `com_block_conf_quant_larger_trt`
+
+**Resolved 2026-04-28 (by David Kim):** The code at `R/CMRSS_SRE.R:1034`
+(`p <- m - k`) is correct. `pval_comb_block` tests the treated-only
+hypothesis `H_{k,c}^treat`. The bug is in the documentation: the
+docstring saying “k between 1 and n”, the example using
+`k = floor(0.9 * n)`, and any wording that implies all-units. David will
+fix the documentation upstream (`davidk91919/CMRSS`). Action on our
+side: leave `R/CMRSS_SRE.R:1034` alone; pull David’s doc fix when it
+lands; rewrite or delete the skipped tests in
+`tests/testthat/test-pval-comb-block-p-convention.R` (they were written
+under the all-units assumption). Item 2B is now unblocked.
 
 Status update from initial reproducer:
 `pval_comb_block(Z, Y, k=19, c=0, ...)` with the existing test inputs

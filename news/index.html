@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">CMRSS</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.5</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.6</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -32,6 +32,14 @@
       <small>Source: <a href="https://github.com/bowers-illinois-edu/CMRSS/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.2.6" id="cmrss-026">CMRSS 0.2.6<a class="anchor" aria-label="anchor" href="#cmrss-026"></a></h2>
+<div class="section level3">
+<h3 id="bug-fixes-0-2-6">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-2-6"></a></h3>
+<ul><li>
+<code><a href="../reference/pval_comb_block.html">pval_comb_block()</a></code> now validates that <code>k</code> lies in <code>1..sum(Z)</code> and errors with a clear message otherwise. Previously, <code>k &gt; sum(Z)</code> made the LP infeasible and the function silently returned <code>p.value = 0</code> with <code>test.stat = Inf</code> (a false rejection). The function tests the treated-only hypothesis <code>H_{k,c}^treat</code>, so <code>k</code> must not exceed the number of treated units.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.2.5" id="cmrss-025">CMRSS 0.2.5<a class="anchor" aria-label="anchor" href="#cmrss-025"></a></h2>
 <div class="section level3">
