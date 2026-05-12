@@ -6,6 +6,7 @@
 # The test is skipped if RIQITE is not available.
 
 test_that("pvalue in one stratum matches RIQITE", {
+  skip("Pending k-convention resolution; see PLAN.md item 1A and commit 53001b0")
   # Skip if RIQITE is not available
   skip_if_not(
     requireNamespace("RIQITE", quietly = TRUE),

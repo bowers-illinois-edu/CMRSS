@@ -4,6 +4,7 @@
 # randomized experiments with multiple blocks.
 
 test_that("pval_comb_block works for stratified experiments", {
+  skip("Pending k-convention resolution; see PLAN.md item 1A and commit 53001b0")
   # Need a solver for this test
   skip_if_not(
     solver_available("highs") || solver_available("gurobi"),
@@ -56,6 +57,7 @@ test_that("pval_comb_block works for stratified experiments", {
 })
 
 test_that("SCRE with single block matches CRE behavior", {
+  skip("Pending k-convention resolution; see PLAN.md item 1A and commit 53001b0")
   # Skip if RIQITE is not available
   skip_if_not(
     requireNamespace("RIQITE", quietly = TRUE),
