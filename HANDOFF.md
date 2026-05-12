@@ -2,9 +2,74 @@
 
 Originally written 2026-04-26 after a paper-vs-code audit. Updated
 2026-04-28 to reflect a repo move, David Kim's reply on item 1A, and
-a follow-on finding that complicates David's reply. Read top to bottom.
+a follow-on finding that complicates David's reply. Updated 2026-05-12
+to record CI infrastructure fixes and explicit skip markers for the
+10 tests that will need to be revisited when David replies. Read top
+to bottom.
 
-## Current state (2026-04-28)
+## Update 2026-05-12: CI now runs on push (10 tests skipped pending David)
+
+The substantive pause described below is unchanged. What changed
+today is that GitHub Actions is now wired up properly on
+`bowers-illinois-edu/CMRSS`, and the 10 tests blocked by item 1A
+carry explicit skip markers so future-Jake can find them with a
+single grep when the conversation with David resumes.
+
+What was broken: push events on `main` were not triggering any
+workflows. The pkgdown site had been deployed by hand from
+`davidk91919/CMRSS` to `gh-pages` rather than by CI. Root cause was
+a UI-only "I understand my workflows, go ahead and enable them"
+gate that had never been clicked at the repo Actions page. The API
+reported workflows as `state: active` regardless, so this was not
+visible from `gh`.
+
+What was changed:
+
+1. Jake clicked the enable gate in the browser; the org Actions
+   policy was confirmed as "Allow all actions and reusable
+   workflows."
+2. `workflow_dispatch:` added to `.github/workflows/R-CMD-check.yaml`
+   so manual triggers work (parity with pkgdown.yaml). Commit
+   `a3b62dd`.
+3. `any::highs` added to `extra-packages:` in R-CMD-check.yaml.
+   Without it, `dependencies: '"hard"'` skipped highs (in Suggests)
+   and `get_default_solver()`'s example aborted with
+   "No solver available." Commit `ebebfa5`.
+4. Ten tests `skip()`'d with the message
+   `"Pending k-convention resolution; see PLAN.md item 1A and commit 53001b0"`.
+   These are the same ten test sites flagged in commit `53001b0`'s
+   message; their `pval_comb_block` calls use the "all-units k =
+   floor(0.8 * N)" convention, which the guard at
+   `R/CMRSS_SRE.R:1034` rejects. Commit `108745d`.
+
+Skipped tests, by file and `test_that` header line:
+
+- `tests/testthat/test-CMRSS_SRE.R` (5): lines 136, 182, 319, 352,
+  407.
+- `tests/testthat/test-pval_scre.R` (2): lines 6, 58.
+- `tests/testthat/test-pval-cre.R` (1): line 8.
+- `tests/testthat/test-solvers.R` (2): lines 57, 199.
+
+Current matrix result: 5/5 OS configs pass
+(macos-latest, windows-latest, ubuntu-latest devel/release/oldrel-1).
+The pkgdown workflow rebuilds the site on every push to `main` and
+deploys to `gh-pages`, so manual `pkgdown::deploy_to_branch()` is no
+longer required.
+
+When David replies and item 1A is resolved, find these tests with:
+
+```
+grep -rn "Pending k-convention resolution" tests/testthat/
+```
+
+Remove the `skip()` line at the top of each affected `test_that`
+block. If the resolution is "tests are wrong, the guard is right,"
+also adjust each test's `k = floor(0.8 * N)` to a value within
+`1..sum(Z)`. If the resolution is "guard is wrong, tests are right,"
+remove the guard at `R/CMRSS_SRE.R:1034` and the dedicated tests in
+`tests/testthat/test-pval-comb-block-p-convention.R`.
+
+## Current state (2026-04-28, still applies)
 
 Work is **paused indefinitely**, awaiting David Kim's reply on a
 follow-up question. Jake's framing in the Slack draft is "tackle this
