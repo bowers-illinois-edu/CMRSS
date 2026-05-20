@@ -1,12 +1,21 @@
-# Test comparing CMRSS CRE results with RIQITE package
+# Test comparing CMRSS pval_comb_block against RIQITE::pval_quantile.
 #
-# This test requires the RIQITE package for comparison functions.
-# Install from GitHub: li-xinran/RIQITE
+# Requires the RIQITE package (install from GitHub: li-xinran/RIQITE).
+# Skipped if RIQITE or a solver is unavailable.
 #
-# The test is skipped if RIQITE is not available.
+# CMRSS tests H_{k,c}^treat (treated-only) with k in 1..sum(Z); RIQITE tests
+# H_{k,c}     (all-units)    with k in 1..n.  These are different hypotheses,
+# but their LP minima for the rank-sum statistic coincide under the translation
+#
+#     k_R (RIQITE, all-units) = k_C (CMRSS, treated-only) + (n - m).
+#
+# Reason: in the LP, xi[i] only enters the statistic through Z[i] * xi[i], so
+# controls' xi is unconstrained.  Assigning all (n - m) controls to xi = c
+# absorbs (n - m) of RIQITE's all-units constraint slack, leaving exactly
+# k_C = k_R - (n - m) treated units constrained.  With a shared Z.perm matrix
+# the two packages return identical p-values.
 
-test_that("pvalue in one stratum matches RIQITE", {
-  skip("Pending k-convention resolution; see PLAN.md item 1A and commit 53001b0")
+test_that("pval_comb_block matches RIQITE::pval_quantile under shared null and k translation", {
   # Skip if RIQITE is not available
   skip_if_not(
     requireNamespace("RIQITE", quietly = TRUE),
@@ -27,47 +36,71 @@ test_that("pvalue in one stratum matches RIQITE", {
   Z <- sample(Z)  # Shuffle
 
   Y <- rnorm(n)
-  k <- floor(0.8 * n)
-  c <- 0
+  k_C   <- floor(0.8 * m)        # treated-only k for CMRSS, = 20
+  k_R   <- k_C + (n - m)         # equivalent all-units k for RIQITE, = 45
+  c_val <- 0
 
   r <- 3  # Stephenson parameter
   block <- factor(rep(1, n))
 
-  # RIQITE method list format
+  # Shared permutation matrix (n x nperm) used by both packages so the empirical
+  # null distributions match cell-for-cell.
+  nperm <- 1000
+  set.seed(98765)
+  Z.perm <- RIQITE::assign_CRE(n, m, nperm)
+
   method.list.riqite.wil <- list(name = "Wilcoxon")
   method.list.riqite.ste <- list(name = "Stephenson", s = r)
 
-  # CMRSS method list format (needs scale parameter, one list per block)
   methods.list.cmrss.wil <- list(list(list(name = "Wilcoxon", scale = FALSE)))
   methods.list.cmrss.ste <- list(list(list(name = "Stephenson", scale = FALSE, s = r)))
 
-  # Compare RIQITE::pval_quantile with CMRSS::pval_comb_block for Wilcoxon
+  block.sum <- summary_block(Z, block)
+  weight    <- weight_scheme(block.sum, "asymp.opt")
+
+  # --- Wilcoxon ---
+  riq_null_wil <- RIQITE::null_dist(n, m, nperm = nperm, Z.perm = Z.perm,
+                                    method.list = method.list.riqite.wil)
+  scores_wil   <- list(score_all_blocks(block.sum$nb, methods.list.cmrss.wil[[1]]))
+  cms_null_wil <- com_null_dist_block(Z, block, methods.list.cmrss.wil, scores_wil,
+                                      null.max = nperm, weight, block.sum,
+                                      Z.perm = Z.perm)
+
   riqite_wil <- RIQITE::pval_quantile(
-    Z = Z, Y = Y, k = k, c = c,
-    method.list = method.list.riqite.wil
+    Z = Z, Y = Y, k = k_R, c = c_val,
+    method.list = method.list.riqite.wil,
+    stat.null = riq_null_wil, switch = FALSE
   )
 
   cmrss_wil <- pval_comb_block(
-    Z = Z, Y = Y, k = k, c = c,
+    Z = Z, Y = Y, k = k_C, c = c_val,
     block = block,
     methods.list.all = methods.list.cmrss.wil,
-    statistic = FALSE
+    stat.null = cms_null_wil, statistic = FALSE
   )
 
-  expect_equal(riqite_wil, cmrss_wil, tolerance = 0.01)
+  expect_equal(as.numeric(riqite_wil), as.numeric(cmrss_wil), tolerance = 1e-6)
 
-  # Compare RIQITE::pval_quantile with CMRSS::pval_comb_block for Stephenson
+  # --- Stephenson ---
+  riq_null_ste <- RIQITE::null_dist(n, m, nperm = nperm, Z.perm = Z.perm,
+                                    method.list = method.list.riqite.ste)
+  scores_ste   <- list(score_all_blocks(block.sum$nb, methods.list.cmrss.ste[[1]]))
+  cms_null_ste <- com_null_dist_block(Z, block, methods.list.cmrss.ste, scores_ste,
+                                      null.max = nperm, weight, block.sum,
+                                      Z.perm = Z.perm)
+
   riqite_ste <- RIQITE::pval_quantile(
-    Z = Z, Y = Y, k = k, c = c,
-    method.list = method.list.riqite.ste
+    Z = Z, Y = Y, k = k_R, c = c_val,
+    method.list = method.list.riqite.ste,
+    stat.null = riq_null_ste, switch = FALSE
   )
 
   cmrss_ste <- pval_comb_block(
-    Z = Z, Y = Y, k = k, c = c,
+    Z = Z, Y = Y, k = k_C, c = c_val,
     block = block,
     methods.list.all = methods.list.cmrss.ste,
-    statistic = FALSE
+    stat.null = cms_null_ste, statistic = FALSE
   )
 
-  expect_equal(riqite_ste, cmrss_ste, tolerance = 0.01)
+  expect_equal(as.numeric(riqite_ste), as.numeric(cmrss_ste), tolerance = 1e-6)
 })

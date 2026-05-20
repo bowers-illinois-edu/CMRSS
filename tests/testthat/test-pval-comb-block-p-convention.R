@@ -3,18 +3,12 @@
 # Why this file exists:
 #
 # `pval_comb_block` tests the treated-only hypothesis H_{k,c}^treat. The LP
-# coverage constraint at R/CMRSS_SRE.R:1034 sets `p <- m - k`, so the valid
-# input range is k in 1..m_total (where m_total = sum(Z)). Outside that range
-# `p` becomes negative, the LP is infeasible, the test statistic returns Inf,
-# and the function silently reports `p.value = 0` -- a false rejection. These
-# tests pin (i) that the function fails visibly outside the valid range, and
-# (ii) that valid inputs produce well-formed output.
-#
-# Note: the inversion sibling `com_block_conf_quant_larger_trt`
-# (R/CMRSS_SRE.R:1171, 1234) uses `p <- n - k` (all-units convention). It
-# tests a different hypothesis than `pval_comb_block` despite the `_trt`
-# suffix. No cross-function comparison test is included here; whether the two
-# functions should be reconciled is a separate decision.
+# coverage constraint sets `p <- m - k`, so the valid input range is k in
+# 1..m_total (where m_total = sum(Z)). Outside that range `p` becomes
+# negative, the LP is infeasible, the test statistic returns Inf, and the
+# function silently reports `p.value = 0` -- a false rejection. These tests
+# pin (i) that the function fails visibly outside the valid range, and (ii)
+# that valid inputs produce well-formed output.
 
 test_that("pval_comb_block does not silently return p.value = 0 when k > m_total", {
   skip_if_not(solver_available("highs"), "HiGHS not available")

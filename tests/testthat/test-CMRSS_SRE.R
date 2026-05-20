@@ -134,7 +134,6 @@ test_that("com_null_dist_block_stratum matches naive computation for fixed Z.per
 # API function tests
 
 test_that("pval_comb_block works with comb.method=1", {
-  skip("Pending k-convention resolution; see PLAN.md item 1A and commit 53001b0")
   skip_if_not(
     solver_available("highs") || solver_available("gurobi"),
     "Neither HiGHS nor Gurobi solver is available"
@@ -146,7 +145,7 @@ test_that("pval_comb_block works with comb.method=1", {
   n <- 8    # units per stratum
   m <- 4    # treated per stratum
   N <- s * n
-  k <- floor(0.8 * N)
+  k <- floor(0.8 * s * m)
   c <- 0
 
   block <- factor(rep(1:s, each = n))
@@ -181,7 +180,6 @@ test_that("pval_comb_block works with comb.method=1", {
 
 
 test_that("pval_comb_block works with comb.method=2", {
-  skip("Pending k-convention resolution; see PLAN.md item 1A and commit 53001b0")
   skip_if_not(
     solver_available("highs") || solver_available("gurobi"),
     "Neither HiGHS nor Gurobi solver is available"
@@ -193,7 +191,7 @@ test_that("pval_comb_block works with comb.method=2", {
   n <- 8
   m <- 4
   N <- s * n
-  k <- floor(0.8 * N)
+  k <- floor(0.8 * s * m)
   c <- 0
 
   block <- factor(rep(1:s, each = n))
@@ -319,7 +317,6 @@ test_that("com_block_conf_quant_larger works with comb.method=2", {
 
 
 test_that("SRE functions work with electric_teachers data", {
-  skip("Pending k-convention resolution; see PLAN.md item 1A and commit 53001b0")
   skip_if_not(
     solver_available("highs") || solver_available("gurobi"),
     "Neither HiGHS nor Gurobi solver is available"
@@ -343,7 +340,7 @@ test_that("SRE functions work with electric_teachers data", {
   }
 
   # Test pval_comb_block
-  k <- floor(0.9 * n)
+  k <- floor(0.9 * sum(Z))
   result <- pval_comb_block(Z, Y, k, c = 0, block, methods.list.all,
                             opt.method = "ILP",
                             null.max = 500)
@@ -353,7 +350,6 @@ test_that("SRE functions work with electric_teachers data", {
 
 
 test_that("Both comb.methods give valid but different results", {
-  skip("Pending k-convention resolution; see PLAN.md item 1A and commit 53001b0")
   skip_if_not(
     solver_available("highs") || solver_available("gurobi"),
     "Neither HiGHS nor Gurobi solver is available"
@@ -365,7 +361,7 @@ test_that("Both comb.methods give valid but different results", {
   n <- 8
   m <- 4
   N <- s * n
-  k <- floor(0.8 * N)
+  k <- floor(0.8 * s * m)
   c <- 0
 
   block <- factor(rep(1:s, each = n))
@@ -409,7 +405,6 @@ test_that("Both comb.methods give valid but different results", {
 
 
 test_that("LP relaxation gives valid results", {
-  skip("Pending k-convention resolution; see PLAN.md item 1A and commit 53001b0")
   skip_if_not(
     solver_available("highs") || solver_available("gurobi"),
     "Neither HiGHS nor Gurobi solver is available"
@@ -421,7 +416,7 @@ test_that("LP relaxation gives valid results", {
   n <- 8
   m <- 4
   N <- s * n
-  k <- floor(0.8 * N)
+  k <- floor(0.8 * s * m)
   c <- 0
 
   block <- factor(rep(1:s, each = n))

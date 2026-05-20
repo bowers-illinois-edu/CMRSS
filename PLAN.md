@@ -26,16 +26,37 @@ Version bumping rule used below: any change that adds, removes, or renames an ex
 
 ### [x] 1A. Reconcile the `p` convention in `pval_comb_block` vs `com_block_conf_quant_larger_trt`
 
-**Resolved 2026-04-28 (by David Kim):** The code at `R/CMRSS_SRE.R:1034`
-(`p <- m - k`) is correct. `pval_comb_block` tests the treated-only
-hypothesis `H_{k,c}^treat`. The bug is in the documentation: the
-docstring saying "k between 1 and n", the example using
-`k = floor(0.9 * n)`, and any wording that implies all-units. David
-will fix the documentation upstream (`davidk91919/CMRSS`). Action on
-our side: leave `R/CMRSS_SRE.R:1034` alone; pull David's doc fix when
-it lands; rewrite or delete the skipped tests in
-`tests/testthat/test-pval-comb-block-p-convention.R` (they were
-written under the all-units assumption). Item 2B is now unblocked.
+**Closed 2026-05-19 (treated-only convention; tests re-enabled in CMRSS 0.2.7).**
+Resolution: `R/CMRSS_SRE.R:1034` (`p <- m - k`) is correct. `pval_comb_block`
+tests the treated-only hypothesis `H_{k,c}^treat` with `k in 1..sum(Z)`. The
+docstring and example have been updated (commit forthcoming; see NEWS.md
+0.2.7). The 10 tests previously skipped pending this resolution have been
+re-enabled with `k` formulas converted from the all-units convention to the
+treated-only convention. Four additional gurobi-gated sites in
+`test-solvers.R` had the same latent bug and were fixed in the same pass.
+The two cross-validation tests against `RIQITE::pval_quantile` now pass a
+shared `Z.perm` to both packages and apply the LP-equivalence translation
+`k_R = k_C + (n - m)`; under that setup the p-values agree exactly. The
+input-validation guard added at `R/CMRSS_SRE.R:1040` in 0.2.6 stays in place.
+`devtools::check()` is clean (0 errors, 0 warnings, 2 pre-existing repo-hygiene
+NOTEs unrelated to this item).
+
+Still open from the larger scenario-(a) audit, deferred to separate sessions:
+
+- `com_block_conf_quant_larger` `set = "all"` path (`R/CMRSS_SRE.R:~1422`):
+  the wrapper swaps `Z <- 1 - Z` before calling back into the LP machinery,
+  so after the swap `m` and `n - m` switch roles. Verify the wrapper
+  correctly translates the user-intended treated-only `k` across that swap.
+- `com_block_conf_quant_larger_trt` (`R/CMRSS_SRE.R:1171, 1234`) still uses
+  `p <- n - k` (all-units). David did not touch these in `762c4d08`. Decide
+  whether to align them to treated-only or document the intentional asymmetry.
+- Paper experiment scripts in
+  `/Users/jwbowers/repos/combined_stephenson_tests/code/`: per the original
+  audit they call the wrapper, not `pval_comb_block` directly, so the paper
+  numbers are likely unaffected. Verification depends on the wrapper audit
+  above.
+
+Item 2B (default `comb.method` flip) is now unblocked.
 
 Status update from initial reproducer: `pval_comb_block(Z, Y, k=19, c=0, ...)` with the existing test inputs (s=3, n=8, m=4 per stratum, total m=12) yields `p = m - k = -7`, the LP returns "Infeasible," the test statistic is `Inf`, and `mean(stat.null >= Inf) = 0`. So the function silently returns `p.value = 0` whenever k > m_total. This is a real, consequential bug.
 

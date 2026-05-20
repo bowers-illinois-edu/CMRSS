@@ -55,7 +55,6 @@ test_that("get_default_solver returns valid solver when available", {
 
 # Test that HiGHS solver works correctly
 test_that("HiGHS solver works for basic optimization", {
-  skip("Pending k-convention resolution; see PLAN.md item 1A and commit 53001b0")
   skip_if_not(solver_available("highs"), "HiGHS is not available")
 
   # Set up a simple test case
@@ -65,7 +64,7 @@ test_that("HiGHS solver works for basic optimization", {
   n <- 6  # units per stratum
   m <- 3  # treated per stratum
   N <- s * n
-  k <- ceiling(0.8 * N)
+  k <- ceiling(0.8 * s * m)
   c <- 0
 
   # Create block structure
@@ -116,7 +115,7 @@ test_that("HiGHS and Gurobi produce equivalent results", {
   n <- 8  # units per stratum
   m <- 4  # treated per stratum
   N <- s * n
-  k <- ceiling(0.9 * N)
+  k <- ceiling(0.9 * s * m)
   c <- 0.5
 
   # Create block structure
@@ -198,7 +197,6 @@ test_that("HiGHS and Gurobi produce equivalent results", {
 
 # Test stratum-level solver (for comb.method=2)
 test_that("Stratum-level solver works with HiGHS", {
-  skip("Pending k-convention resolution; see PLAN.md item 1A and commit 53001b0")
   skip_if_not(solver_available("highs"), "HiGHS is not available")
 
   set.seed(22222)
@@ -207,7 +205,7 @@ test_that("Stratum-level solver works with HiGHS", {
   n <- 6  # units per stratum
   m <- 3  # treated per stratum
   N <- s * n
-  k <- ceiling(0.8 * N)
+  k <- ceiling(0.8 * s * m)
   c <- 0
 
   block <- factor(rep(1:s, each = n))
@@ -254,7 +252,7 @@ test_that("Stratum-level solvers give equivalent results for HiGHS and Gurobi", 
   n <- 6
   m <- 3
   N <- s * n
-  k <- ceiling(0.8 * N)
+  k <- ceiling(0.8 * s * m)
   c <- 0
 
   block <- factor(rep(1:s, each = n))
@@ -364,7 +362,7 @@ test_that("Old opt.method values still work (backward compatibility)", {
   n <- 4
   m <- 2
   N <- s * n
-  k <- ceiling(0.75 * N)
+  k <- ceiling(0.75 * s * m)
   c <- 0
 
   block <- factor(rep(1:s, each = n))
@@ -436,7 +434,7 @@ test_that("Multiple quantile tests produce consistent results across solvers", {
                                    null.max = 200, weight, block.sum, Z.perm = NULL)
 
   # Test several quantiles
-  k_values <- c(floor(0.7 * N), floor(0.8 * N), floor(0.9 * N))
+  k_values <- c(floor(0.7 * s * m), floor(0.8 * s * m), floor(0.9 * s * m))
 
   for (k in k_values) {
     result_highs <- pval_comb_block(Z, Y, k, c, block, methods.list.all,

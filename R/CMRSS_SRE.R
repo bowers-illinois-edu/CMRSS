@@ -923,18 +923,22 @@ com_null_dist_block_stratum <- function(Z, block, methods.list.all,
 
 
 #' Combined test statistic and combined p-value for randomization test
-#' for quantiles of individual treatment effects
+#' for quantiles of individual treatment effects (treated-only)
 #'
-#' Obtain the combined stratified rank sum statistic
-#' and combined p-value for testing the given
-#' null hypothesis H0: \eqn{\tau_{(k)} \leq c}, or \eqn{H0: \tau_{(k)} \geq c}, or
-#' \eqn{H0: \tau_{(k)} = c}, where \eqn{\tau_{(k)}} denotes individual
-#' treatment effect at rank k.
+#' Obtain the combined stratified rank sum statistic and combined p-value for
+#' testing the treated-only null hypothesis
+#' \eqn{H_{k,c}^{\mathrm{treat}}}: at least \eqn{k} of the \eqn{m = \sum_i Z_i}
+#' treated units have individual treatment effect at least \eqn{c} (greater
+#' alternative), or the analogous less / two-sided variants. The quantile
+#' index \eqn{k} ranges over \eqn{1, \ldots, m}; values outside that range
+#' make the underlying LP coverage constraint \eqn{p = m - k} infeasible and
+#' raise an error.
 #'
 #' @param Z An \eqn{n} dimensional treatment assignment vector.
 #' @param Y An \eqn{n} dimensional observed outcome vector.
-#' @param k An integer between 1 and n specifying which quantile of
-#'   individual effect is of interest.
+#' @param k An integer between 1 and \eqn{\sum_i Z_i} (the number of treated
+#'   units) specifying which quantile of the individual treatment effects
+#'   among the treated is of interest.
 #' @param c A numerical object specifying the threshold for the null
 #'   hypothesis.
 #' @param block An \eqn{n} dimensional vector specifying block of each
@@ -996,8 +1000,8 @@ com_null_dist_block_stratum <- function(Z, block, methods.list.all,
 #'   })
 #' }
 #'
-#' # Test if the 90th percentile effect is <= 0
-#' k <- floor(0.9 * n)
+#' # Test if the 90th percentile treated-only effect is <= 0
+#' k <- floor(0.9 * sum(Z))
 #' result <- pval_comb_block(Z, Y, k, c = 0, block, methods.list.all,
 #'                           opt.method = "ILP", null.max = 10000)
 #' print(result)
@@ -1030,7 +1034,6 @@ pval_comb_block <- function(Z, Y, k, c,
   H <- length(methods.list.all)
   N <- length(Y)
   m <- sum(Z)
-  # p <- N - k
   p <- m - k
 
   # Validate k against the current LP coverage constraint at line above.

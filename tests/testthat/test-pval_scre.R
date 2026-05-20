@@ -4,7 +4,6 @@
 # randomized experiments with multiple blocks.
 
 test_that("pval_comb_block works for stratified experiments", {
-  skip("Pending k-convention resolution; see PLAN.md item 1A and commit 53001b0")
   # Need a solver for this test
   skip_if_not(
     solver_available("highs") || solver_available("gurobi"),
@@ -17,7 +16,7 @@ test_that("pval_comb_block works for stratified experiments", {
   n <- 10   # units per stratum
   m <- 5    # treated per stratum
   N <- s * n
-  k <- floor(0.8 * N)
+  k <- floor(0.8 * s * m)
   c <- 0
 
   # Create block assignments and treatment vector
@@ -56,8 +55,19 @@ test_that("pval_comb_block works for stratified experiments", {
   expect_true(result["p.value"] >= 0 && result["p.value"] <= 1)
 })
 
-test_that("SCRE with single block matches CRE behavior", {
-  skip("Pending k-convention resolution; see PLAN.md item 1A and commit 53001b0")
+# CMRSS tests H_{k,c}^treat (treated-only) with k in 1..sum(Z); RIQITE tests
+# H_{k,c}     (all-units)    with k in 1..n.  These are different hypotheses,
+# but their LP minima for the rank-sum statistic coincide under the translation
+#
+#     k_R (RIQITE, all-units) = k_C (CMRSS, treated-only) + (n - m).
+#
+# Reason: in the LP, xi[i] only enters the statistic through Z[i] * xi[i], so
+# controls' xi is unconstrained.  Assigning all (n - m) controls to xi = c
+# absorbs (n - m) of RIQITE's all-units constraint slack, leaving exactly
+# k_C = k_R - (n - m) treated units constrained.  With a shared Z.perm matrix
+# the two packages return identical p-values.
+
+test_that("SCRE single block matches RIQITE CRE under shared null and k translation", {
   # Skip if RIQITE is not available
   skip_if_not(
     requireNamespace("RIQITE", quietly = TRUE),
@@ -74,28 +84,45 @@ test_that("SCRE with single block matches CRE behavior", {
 
   n <- 40
   m <- 20
-  k <- floor(0.8 * n)
-  c <- 0
+  k_C   <- floor(0.8 * m)        # treated-only k for CMRSS, = 16
+  k_R   <- k_C + (n - m)         # equivalent all-units k for RIQITE, = 36
+  c_val <- 0
 
   Z <- c(rep(1, m), rep(0, n - m))
   Z <- sample(Z)
   Y <- rnorm(n)
   block <- factor(rep(1, n))
 
-  # RIQITE for CRE
+  nperm <- 1000
+  set.seed(11111)
+  Z.perm <- RIQITE::assign_CRE(n, m, nperm)
+
+  method.list.riqite <- list(name = "Wilcoxon")
+  methods.list.cmrss <- list(list(list(name = "Wilcoxon", scale = FALSE)))
+
+  block.sum <- summary_block(Z, block)
+  weight    <- weight_scheme(block.sum, "asymp.opt")
+  scores    <- list(score_all_blocks(block.sum$nb, methods.list.cmrss[[1]]))
+
+  riq_null <- RIQITE::null_dist(n, m, nperm = nperm, Z.perm = Z.perm,
+                                method.list = method.list.riqite)
+  cms_null <- com_null_dist_block(Z, block, methods.list.cmrss, scores,
+                                  null.max = nperm, weight, block.sum,
+                                  Z.perm = Z.perm)
+
   riqite_result <- RIQITE::pval_quantile(
-    Z = Z, Y = Y, k = k, c = c,
-    method.list = list(name = "Wilcoxon")
+    Z = Z, Y = Y, k = k_R, c = c_val,
+    method.list = method.list.riqite,
+    stat.null = riq_null, switch = FALSE
   )
 
-  # CMRSS with single block (should behave like CRE)
   cmrss_result <- pval_comb_block(
-    Z = Z, Y = Y, k = k, c = c,
+    Z = Z, Y = Y, k = k_C, c = c_val,
     block = block,
-    methods.list.all = list(list(list(name = "Wilcoxon", scale = FALSE))),
-    statistic = FALSE
+    methods.list.all = methods.list.cmrss,
+    stat.null = cms_null, statistic = FALSE
   )
 
-  # Results should be similar
-  expect_equal(riqite_result, cmrss_result, tolerance = 0.02)
+  expect_equal(as.numeric(riqite_result), as.numeric(cmrss_result),
+               tolerance = 1e-6)
 })

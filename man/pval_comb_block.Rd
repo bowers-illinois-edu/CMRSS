@@ -3,7 +3,7 @@
 \name{pval_comb_block}
 \alias{pval_comb_block}
 \title{Combined test statistic and combined p-value for randomization test
-for quantiles of individual treatment effects}
+for quantiles of individual treatment effects (treated-only)}
 \usage{
 pval_comb_block(
   Z,
@@ -25,8 +25,9 @@ pval_comb_block(
 
 \item{Y}{An \eqn{n} dimensional observed outcome vector.}
 
-\item{k}{An integer between 1 and n specifying which quantile of
-individual effect is of interest.}
+\item{k}{An integer between 1 and \eqn{\sum_i Z_i} (the number of treated
+units) specifying which quantile of the individual treatment effects
+among the treated is of interest.}
 
 \item{c}{A numerical object specifying the threshold for the null
 hypothesis.}
@@ -77,11 +78,14 @@ The p-value (and test statistic) for testing the specified
 null hypothesis of interest.
 }
 \description{
-Obtain the combined stratified rank sum statistic
-and combined p-value for testing the given
-null hypothesis H0: \eqn{\tau_{(k)} \leq c}, or \eqn{H0: \tau_{(k)} \geq c}, or
-\eqn{H0: \tau_{(k)} = c}, where \eqn{\tau_{(k)}} denotes individual
-treatment effect at rank k.
+Obtain the combined stratified rank sum statistic and combined p-value for
+testing the treated-only null hypothesis
+\eqn{H_{k,c}^{\mathrm{treat}}}: at least \eqn{k} of the \eqn{m = \sum_i Z_i}
+treated units have individual treatment effect at least \eqn{c} (greater
+alternative), or the analogous less / two-sided variants. The quantile
+index \eqn{k} ranges over \eqn{1, \ldots, m}; values outside that range
+make the underlying LP coverage constraint \eqn{p = m - k} infeasible and
+raise an error.
 }
 \examples{
 \dontrun{
@@ -105,8 +109,8 @@ for (j in seq_along(r.vec)) {
   })
 }
 
-# Test if the 90th percentile effect is <= 0
-k <- floor(0.9 * n)
+# Test if the 90th percentile treated-only effect is <= 0
+k <- floor(0.9 * sum(Z))
 result <- pval_comb_block(Z, Y, k, c = 0, block, methods.list.all,
                           opt.method = "ILP", null.max = 10000)
 print(result)
