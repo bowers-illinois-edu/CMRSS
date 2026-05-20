@@ -6,7 +6,37 @@ a follow-on finding that complicates David's reply. Updated 2026-05-12
 to record CI infrastructure fixes and explicit skip markers for the
 10 tests that needed to be revisited when David replied. Updated
 2026-05-19 to record the closure of item 1A (treated-only convention
-adopted; tests re-enabled in CMRSS 0.2.7). Read top to bottom.
+adopted; tests re-enabled in CMRSS 0.2.7) and scenario-(a) step 3
+(`com_block_conf_quant_larger` wrapper audit; no bug; function
+documentation added). Read top to bottom.
+
+## TL;DR for the next session (2026-05-20 onward)
+
+**Item 1A is closed.** Treated-only convention adopted; 10 previously
+skipped tests are unskipped and passing; the cross-validation against
+RIQITE uses the `k_R = k_C + (n - m)` translation under a shared
+`Z.perm`. `com_block_conf_quant_larger`'s `set = "all"` and
+`set = "control"` paths were audited against `main.tex` and found
+correct; tests and function documentation are in place.
+`devtools::check()` is clean (0 errors, 0 warnings, 2 pre-existing
+repo-hygiene NOTEs). `main` is at `99af2eb` (pushed). Working tree
+should be clean.
+
+**Status of the older "paused indefinitely" framing below: stale.**
+The 2026-04-28 section and several below it describe a state of
+waiting for David Kim's reply on item 1A. That wait is over and the
+resolution is recorded in the 2026-05-19 update. Read those older
+sections only for forensic context, not for next-step guidance.
+
+**Paper status:** the manuscript is under review. Risk posture for
+the package: ideally no numerical-output changes between now and the
+revise-and-resubmit (R&R) signal. If a fix demonstrably requires a
+numerical-output change, it can still land -- that change would be
+folded into the R&R revision. Tomorrow-Claude should mention this
+tradeoff before any user-visible default change (2A, 2B, possibly 1B).
+
+**The "Suggested next session opening" section at the bottom of this
+file is up to date** (rewritten 2026-05-19). Start there.
 
 ## Update 2026-05-19: item 1A closed (treated-only convention; 0.2.7)
 
@@ -481,17 +511,51 @@ Priority 3:
   repo. Main entry: `main.tex`. Reference R code:
   `code/codes_20251026.R`. Experiment scripts: rest of `code/`.
 
-## Suggested next session opening
+## Suggested next session opening (rewritten 2026-05-19; supersedes the older one)
 
-1. Read `HANDOFF.md` (this file) top to bottom.
-2. Check whether `/tmp/slack_to_david_followup.md` still exists. If
-   yes, ask Jake whether it has been sent and whether David has
-   replied. If no, ask whether the conversation moved elsewhere.
-3. If David has replied: follow the "Restarting after David replies"
-   section above. Do not start coding before reading his reply.
-4. If David has not replied: ask Jake whether to move on to an
-   independent item (1B or 2A) or hold. Do not start work on 1A
-   variations or anything that would conflict with either resolution.
-5. Re-read the workflow memory at
+1. Read the **TL;DR at the top of this file**. Skim the 2026-05-19
+   update. The older sections (2026-04-28 "Current state", "The open
+   question for David", "Restarting after David replies", etc.) are
+   historical only -- do not act on them.
+2. Confirm the working tree is clean and `main` is at the latest
+   pushed commit (`git status`, `git log --oneline -3`).
+3. Re-read workflow memory at
    `/Users/jwbowers/.claude/projects/-Users-jwbowers-repos-CMRSS-jake/memory/feedback_coding_workflow.md`
-   before any implementation.
+   before any code work. Re-read the terminology memory at
+   `feedback_terminology_function_documentation.md` (write "function
+   documentation," not "docstring").
+4. Ask Jake which open item to tackle. The live menu, ordered by
+   risk against the under-review manuscript:
+   - **Safe (no numerical change):**
+     - **2C** -- rename `method_berger_boos` to e.g.
+       `method_bonferroni_two_sided` (the function does Bonferroni
+       `pmax`, not Berger-Boos; `R/comparison_methods.R:539-563`).
+       Pure rename + deprecation shim.
+     - **Coverage simulation for the wrapper** -- verify the
+       (1 - alpha) joint coverage claim on synthetic data with
+       known truth. No code change, just a long test.
+     - **3A, 3B, 3E** -- pure function-documentation clarifications
+       (PLAN.md).
+     - **Scenario-(a) step 4** -- optional refactor of
+       `com_block_conf_quant_larger_trt` from all-units to
+       treated-only `k`. Functionally equivalent; mechanically
+       removes the asymmetry with `pval_comb_block`.
+   - **Possible numerical change (preferable to wait for R&R):**
+     - **1B** -- column range `0:nb[i]` in
+       `comb_matrix_block_stratum` (`R/CMRSS_SRE.R:704`) vs paper
+       `eq:comb_per_stratum`. Possible over-enumeration. If wrong,
+       `comb.method = 2` outputs shift.
+     - **2A** -- `ties.method = "first"` vs `"random"` (`R/CMRSS_CRE.R:13, 278`;
+       `R/CMRSS_SRE.R:231, 799`). Finite-sample validity question;
+       `electric_teachers` has many ties.
+     - **2B** -- default `comb.method = 1` -> `2` (now unblocked by
+       item 1A). User-visible default change.
+     - **3C, 3D** -- alpha-semantics docs and default harmonization
+       that touch user-facing behavior.
+   - **Scenario-(a) step 5** (paper-script audit at
+     `combined_stephenson_tests/code/`) -- deferred; low priority
+     since the scripts call the wrapper, not `pval_comb_block`
+     directly, and the wrapper is now verified.
+5. Do not start coding before Jake picks an item and confirms scope.
+   For any item that might change numerical outputs, raise the
+   manuscript-review tradeoff first.
