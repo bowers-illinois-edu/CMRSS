@@ -41,20 +41,33 @@ input-validation guard added at `R/CMRSS_SRE.R:1040` in 0.2.6 stays in place.
 `devtools::check()` is clean (0 errors, 0 warnings, 2 pre-existing repo-hygiene
 NOTEs unrelated to this item).
 
-Still open from the larger scenario-(a) audit, deferred to separate sessions:
+Still open from the larger scenario-(a) audit:
 
-- `com_block_conf_quant_larger` `set = "all"` path (`R/CMRSS_SRE.R:~1422`):
-  the wrapper swaps `Z <- 1 - Z` before calling back into the LP machinery,
-  so after the swap `m` and `n - m` switch roles. Verify the wrapper
-  correctly translates the user-intended treated-only `k` across that swap.
-- `com_block_conf_quant_larger_trt` (`R/CMRSS_SRE.R:1171, 1234`) still uses
-  `p <- n - k` (all-units). David did not touch these in `762c4d08`. Decide
-  whether to align them to treated-only or document the intentional asymmetry.
+- `com_block_conf_quant_larger` `set = "all"` and `set = "control"` paths
+  (`R/CMRSS_SRE.R:1430-1499`): **Closed 2026-05-19, no functional bug.**
+  Verified against paper eq:H_kc_t / eq:H_kc_c (main.tex lines 459-466,
+  479, 502, 940, 948-950). The swap `Z <- 1 - Z, Y <- -Y` preserves
+  individual effects via the relabeling `tilde_tau_treat(k) = tau_control(k)`
+  (paper line 479), so the swap-space lower CIs are directly lower CIs on
+  `tau_control(k)` in the original problem; no sign flip or index reversal
+  is needed. `set = "all"` correctly applies the Bonferroni split (alpha/2
+  per branch) per paper line 502. New tests in
+  `tests/testthat/test-com_block_conf_quant_larger-sets.R` pin the
+  wrapper's structural behavior at `tolerance = 1e-6` via paired
+  `set.seed` calls. `com_block_conf_quant_larger_trt`'s function
+  documentation expanded to record the all-units convention and the
+  LP-equivalence with `pval_comb_block`.
+- `com_block_conf_quant_larger_trt` (`R/CMRSS_SRE.R:1171, 1234`) still
+  uses `p <- n - k` (all-units). David did not touch these in `762c4d08`.
+  Now correctly *documented* as the all-units convention; remaining
+  question is whether to refactor `_trt` to take treated-only `k`
+  internally (functionally equivalent, removes the asymmetry with
+  `pval_comb_block`, but risks breaking any downstream caller of
+  `_trt`). Deferred.
 - Paper experiment scripts in
-  `/Users/jwbowers/repos/combined_stephenson_tests/code/`: per the original
-  audit they call the wrapper, not `pval_comb_block` directly, so the paper
-  numbers are likely unaffected. Verification depends on the wrapper audit
-  above.
+  `/Users/jwbowers/repos/combined_stephenson_tests/code/`: with the
+  wrapper now confirmed correct, paper-side numbers are unaffected. Low
+  priority; deferred.
 
 Item 2B (default `comb.method` flip) is now unblocked.
 

@@ -66,29 +66,66 @@ Both NOTEs are pre-existing repo-hygiene items (hidden files like
 `devtools::test()`: 135+ pass, 4 skip (all gurobi-gated; no
 k-convention skips remain).
 
+### Scenario-(a) step 3 closed 2026-05-19 (no functional bug)
+
+The `com_block_conf_quant_larger` `set = "all"` and `set = "control"`
+paths were audited against `main.tex` (eq:H_kc_t, eq:H_kc_c, paper
+lines 459-466, 479, 502, 940, 948-950). Finding: the wrapper is
+mathematically correct.
+
+- Under the swap `Z <- 1 - Z, Y <- -Y`, individual effects are
+  preserved via the relabeling
+  `tilde_tau_treat(k) = tau_control(k)` (paper line 479). The
+  swap-space lower CIs returned by
+  `com_block_conf_quant_larger_trt(1 - Z, -Y, ...)` are *directly*
+  lower CIs on `tau_control(k)` in the original problem -- no sign
+  flip or index reversal is needed. My earlier suspicion that the
+  wrapper was returning "negated upper bounds" was wrong; I was
+  thinking of the swap as `tilde_tau = -tau`, but the correct
+  potential-outcome bookkeeping (`tilde_Y(1) = -Y(0)`,
+  `tilde_Y(0) = -Y(1)`) leaves `tilde_tau = tau` unchanged.
+- `set = "all"` is the Bonferroni pool from paper line 502: it calls
+  the treat and control branches at `alpha/2` each, sorts, and
+  returns. The user's `alpha` is the joint coverage level
+  (1 - alpha simultaneous coverage), consistent with paper line 950.
+
+Work landed this pass:
+
+- New file `tests/testthat/test-com_block_conf_quant_larger-sets.R`
+  with 4 `test_that` blocks (9 assertions). Pins length and type,
+  pins `set = "control"` equals direct `_trt(1 - Z, -Y, ...)` with
+  the correct slice, pins `set = "all"` equals
+  `sort(c(treat_branch, control_branch))` at `alpha/2` each, pins
+  the Bonferroni alpha split. All checks use `set.seed` paired
+  calls so the RNG consumed for the null permutations is identical
+  between the wrapper call and the manual replication; equality is
+  exact (`tolerance = 1e-6`), not MC-tolerant.
+- Function documentation on `com_block_conf_quant_larger_trt`
+  expanded with `@details` explaining (i) the all-units convention
+  (`p <- n - k`), (ii) the validity-theorem equivalence to
+  `pval_comb_block`'s treated-only convention under the translation
+  `k_R = k_C + (n - m)`, (iii) the swap semantics for the control /
+  all branches. Internal function only, no exported-symbol change,
+  no version bump.
+
 ### Still open from the larger scenario-(a) audit
 
-These were explicitly deferred ("minimum to close item 1A") and
-remain as separate sessions whenever Jake is ready:
-
-1. **`com_block_conf_quant_larger` `set = "all"` path
-   (`R/CMRSS_SRE.R:~1422`).** The wrapper swaps `Z <- 1 - Z` before
-   calling back into the same LP machinery. After the swap `m` and
-   `n - m` switch roles. Verify the wrapper correctly translates the
-   user-intended treated-only `k` across that swap.
-2. **`com_block_conf_quant_larger_trt` at `R/CMRSS_SRE.R:1171, 1234`
-   still uses `p <- n - k` (all-units).** If `pval_comb_block` is
-   treated-only and the inversion sibling is all-units, they test
-   different hypotheses despite the `_trt` suffix. Decide whether
-   to align both to treated-only or document the intentional
-   asymmetry.
-3. **Paper experiment scripts in
-   `/Users/jwbowers/repos/combined_stephenson_tests/code/`.** Per the
-   original audit, the scripts call only the wrapper
-   `com_block_conf_quant_larger` and `com_conf_quant_larger_cre`, not
-   `pval_comb_block` directly. Paper-side numbers are likely
-   unaffected by `762c4d08`, but if item 1 above turns up a wrapper
-   issue, the scripts may need a re-run.
+1. **`com_block_conf_quant_larger_trt` at `R/CMRSS_SRE.R:1171, 1234`
+   still uses `p <- n - k` (all-units).** Now correctly *documented*
+   as the all-units convention with the LP-equivalence note. But
+   the asymmetry with `pval_comb_block` (treated-only) remains a
+   maintenance hazard. Optional refactor: change `_trt` to take
+   treated-only `k` internally and update the wrapper's slicing
+   accordingly. Functionally equivalent; risk is that any
+   downstream caller of `_trt` (which is `@keywords internal` but
+   still callable) would break.
+2. **Paper experiment scripts in
+   `/Users/jwbowers/repos/combined_stephenson_tests/code/`.** Per
+   the original audit, the scripts call only the wrapper
+   `com_block_conf_quant_larger` and `com_conf_quant_larger_cre`,
+   not `pval_comb_block` directly. With the wrapper now confirmed
+   correct, paper-side numbers are unaffected. Audit is low
+   priority; defer.
 
 Other items still in PLAN.md (1B, 2A, 2B, 2C, 3A-3F) are unchanged
 by this session. With item 1A closed, item 2B (default `comb.method`

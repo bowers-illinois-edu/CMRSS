@@ -1102,7 +1102,42 @@ pval_comb_block <- function(Z, Y, k, c,
 
 #' Helper function for Simultaneous Inference for multiple quantiles on SRE
 #'
-#' Output is a lower limit of prediction intervals for prespecified quantiles.
+#' Output is a lower limit of prediction intervals for prespecified quantiles
+#' under the all-units convention.  Used internally by
+#' \code{\link{com_block_conf_quant_larger}}.
+#'
+#' @details
+#' The hypothesis tested at each \code{k} is the all-units null
+#' \eqn{H_{k, c}: \tau_{(k)} \le c}, where
+#' \eqn{\tau_{(1)} \le \tau_{(2)} \le \ldots \le \tau_{(n)}} are the sorted
+#' individual treatment effects across all \eqn{n} units.  The LP coverage
+#' constraint sets \code{p <- n - k} (lines 1185 and 1248 of
+#' \code{R/CMRSS_SRE.R}); \code{k} ranges over \eqn{1, \ldots, n} and the
+#' loop fills \code{quantiles[k]} for \eqn{k = n - m, \ldots, n}, where
+#' \eqn{m = \mathrm{sum}(Z)}, padding the remaining lower entries with
+#' \code{quantiles[n - m]}.
+#'
+#' By the validity result extending \cite{ZL24quantile} (cf. main.tex
+#' eq:H_kc_t and the discussion at lines 479 and 519-520), the inverted
+#' \eqn{1 - \alpha} lower bound for \eqn{\tau_{(k)}} is simultaneously a
+#' valid \eqn{1 - \alpha} lower prediction bound for
+#' \eqn{\tau_{\mathrm{treat}(k - n_{\mathrm{control}})}}, where
+#' \eqn{n_{\mathrm{control}} = n - m}.  Equivalently, the LP minimum at
+#' all-units index \eqn{k_R} matches the LP minimum that
+#' \code{\link{pval_comb_block}} (treated-only convention,
+#' \code{p <- m - k}) would compute at \eqn{k_C = k_R - n_{\mathrm{control}}}.
+#' The two functions therefore produce the same numerical confidence
+#' bounds despite indexing their \code{k} differently.
+#'
+#' \code{\link{com_block_conf_quant_larger}} calls this function in three
+#' modes: directly with \code{(Z, Y)} for \code{set = "treat"}, and with
+#' \code{(1 - Z, -Y)} for \code{set = "control"} and the control half of
+#' \code{set = "all"}.  Under the swap, individual effects are preserved via
+#' the relabeling
+#' \eqn{\tilde{\tau}_{\mathrm{treat}(k)} = \tau_{\mathrm{control}(k)}} (cf.
+#' main.tex line 479), so the swap-space lower CIs returned by this function
+#' are directly lower CIs on \eqn{\tau_{\mathrm{control}(k)}} in the original
+#' problem -- no sign flip or index reversal is needed.
 #'
 #' @inheritParams pval_comb_block
 #' @param k.vec Optional vector of specific quantile indices to compute.
@@ -1110,7 +1145,10 @@ pval_comb_block <- function(Z, Y, k, c,
 #' @param tol Tolerance for root-finding algorithm.
 #' @param alpha Significance level for confidence intervals.
 #'
-#' @return Vector of lower confidence limits for the specified quantiles.
+#' @return Vector of length \code{n} giving lower confidence limits for the
+#'   all-units quantiles \eqn{\tau_{(1)}, \ldots, \tau_{(n)}}.  Only entries
+#'   indexed by \eqn{k = n - m, \ldots, n} (where \eqn{m = \mathrm{sum}(Z)})
+#'   are computed by the LP; lower entries are padded.
 #'
 #' @keywords internal
 com_block_conf_quant_larger_trt <- function(Z, Y,
