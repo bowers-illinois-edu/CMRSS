@@ -26,7 +26,7 @@ test_that("pvalue in one stratum matches RIQITE", {
   Z <- sample(Z)  # Shuffle
 
   Y <- rnorm(n)
-  k <- floor(0.8 * n)
+  k <- floor(0.8 * m) ## David: updated k
   c <- 0
 
   r <- 3  # Stephenson parameter
