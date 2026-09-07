@@ -1,0 +1,660 @@
+---
+title: "What CMRSS could delegate to `coin`, and what it could not"
+subtitle: "Reuse, speed, and whether CMRSS and riposte should be one package"
+author: "Jake Bowers and Claude"
+date: 2026-09-07
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: false
+    embed-resources: true
+  pdf:
+    toc: true
+    number-sections: true
+execute:
+  warning: false
+  message: false
+---
+
+## The answer, before the argument
+
+CMRSS does two separable things. It builds a reference distribution --- rank
+scores, block-respecting draws of the treatment assignment, the exact
+permutation mean and variance of each rank sum statistic, and the distribution
+of the largest standardized one. And it computes an observed statistic ---
+the smallest value the combined rank sum could take over the treated-unit
+potential outcomes that the null hypothesis $H_{k,c}$ still permits, which in
+the stratified case requires an integer program to allocate a budget of
+large-effect units across blocks.
+
+`coin::independence_test` computes the first of those. I checked its
+permutation mean and standard deviation against the ones CMRSS computes and
+they agree to six digits, and its Monte Carlo reference distribution matches
+CMRSS's to Monte Carlo error. It computes none of the second, and neither does
+SOUP, which was archived from CRAN on 2022-06-10 and whose menu of statistics
+never accepted a user-supplied score vector anyway.
+
+By executable lines of R, the reference-distribution layer is about a fifth of
+the package. The rest stays. So the honest answer to "is this a lot of custom
+code that duplicates a tested library" is: some of it is, and it is not where
+the time goes.
+
+The reference distribution is 95 percent of a single p-value, but the package
+already lets you compute it once and pass it in, so that time is avoidable
+without changing anything. The time in the confidence intervals goes somewhere
+else --- into a function called `min_stat` --- and the fix for that is not
+`coin` and not C++. It is the observation --- which I checked below
+--- that `min_stat` is a step function of the threshold $c$ with a known,
+finite set of jump points. That turns the confidence-interval search from an
+approximate root-find into an exact search over a finite list.
+
+
+## Why the package splits into layers at all
+
+Before comparing CMRSS to anything, it helps to say what the package computes,
+in the order it computes it, because the comparison has to go layer by
+layer.
+
+The hypothesis under test is $H_{k,c}$: at most $n - k$ of the units have an
+individual treatment effect larger than $c$. Testing it needs three ingredients,
+and turning the test into a confidence interval needs a fourth.
+
+First, a test statistic. CMRSS uses a weighted stratified rank sum. Within
+block $b$, each unit gets a score $a_b(j)$ depending only on its rank $j$ among
+the $n_b$ outcomes in that block, and the block's contribution is the sum of
+the scores of its treated units, divided by the number treated $m_b$ and
+multiplied by a weight $w_b$. Summing across blocks gives one statistic. Using
+several score functions --- Wilcoxon, Stephenson at several values of $s$,
+polynomial at several powers $r$ --- gives $H$ statistics, and the package
+combines them by standardizing each and taking the largest.
+
+Second, a reference distribution for that combined statistic. The design fixes
+$m_b$ treated units in each block, so re-drawing which units are treated,
+independently across blocks, gives the randomization distribution. CMRSS draws
+it by Monte Carlo.
+
+Third --- and this is the ingredient with no counterpart in a general
+permutation-testing package --- the value of the statistic to compare against
+that distribution. Under a sharp null the researcher knows every unit's control
+outcome, so the statistic is a number computed from the data. Under $H_{k,c}$
+the researcher does not. The null permits many configurations of the control
+potential outcomes, and each gives a different value of the statistic. The
+p-value has to be valid for all of them, so CMRSS computes the *smallest*
+value the statistic can take across the permitted configurations and compares
+that. In one block, `min_stat` does this by imputing $Y_i - c$ for each treated
+unit that the null holds to an effect of at most $c$, and $-\infty$ for the at
+most $n - k$ units the null lets off, which pushes them to the bottom of the
+ranking. Across blocks, the budget of exempt units has to be split among the
+blocks in whatever way makes the combined statistic smallest, and that
+allocation is the integer program in `R/solvers.R`.
+
+Fourth, for the confidence intervals, the whole test gets inverted: for each
+$k$, find the smallest $c$ at which the test no longer rejects.
+
+Those four ingredients are the layers. `coin` owns the second and the exact
+moments the second needs. It has no vocabulary for the third or the fourth.
+
+
+## What `coin` reproduces
+
+The statistic CMRSS builds is, in the terms `coin` uses, a linear statistic:
+$T_h = \sum_i z_i g_h(i)$, where $z_i$ indicates treatment and $g_h(i)$ is a
+score attached to unit $i$. CMRSS builds exactly this matrix of unit-level
+scores inside `com_null_dist_block`, under the name `reordered_scores`, by
+setting unit $i$'s entry in block $b$ to $w_b / m_b$ times its rank score.
+Handing that matrix to `coin` should therefore give the same permutation mean
+and covariance that `mu_sigma_list` computes in R.
+
+It does, but only after fixing one thing that is easy to get wrong.
+
+```{r}
+#| label: moments
+suppressMessages({library(coin); library(CMRSS)})
+set.seed(20260907)
+
+## Unbalanced blocks on purpose: 4 treated of 12. With m_b = n_b/2 the treated
+## sum and the control sum have the same permutation distribution, so a
+## balanced check cannot tell which of the two coin scored.
+B <- 7; per <- 12; mtrt <- 4
+n <- B * per
+block <- factor(rep(seq_len(B), each = per))
+Z <- unlist(lapply(split(seq_len(n), block),
+                   function(ix) sample(c(rep(1, mtrt), rep(0, per - mtrt)))))
+
+## Three polynomial score functions, one statistic each, same method in every block
+mla <- lapply(c(2, 6, 10), function(r)
+  lapply(seq_len(B), function(i)
+    list(name = "Polynomial", r = r, std = TRUE, scale = FALSE)))
+
+bs  <- CMRSS:::summary_block(Z, block)
+w   <- CMRSS:::weight_scheme(bs, "asymp.opt")
+sla <- lapply(mla, function(m) CMRSS:::score_all_blocks(bs$nb, m))
+
+## The unit-level score matrix, built the way com_null_dist_block builds it
+H <- length(mla)
+reordered <- matrix(0, n, H)
+for (h in 1:H) for (i in 1:B) {
+  u <- bs$units.block[[i]]
+  reordered[u, h] <- w[i] / bs$mb[i] * sla[[h]][[i]]
+}
+ms <- CMRSS:::mu_sigma_list(Z, block, w, mla, sla, bs)
+```
+
+With the treatment variable written as `factor(Z)`, `coin` takes the levels in
+sorted order and scores the *first* one, which is the control group:
+
+```{r}
+#| label: trap
+it0 <- independence_test(reordered ~ factor(Z) | block,
+                         teststat = "maximum", alternative = "greater",
+                         distribution = "asymptotic")
+rbind(`coin linear statistic` = as.numeric(statistic(it0, "linear")),
+      `sum over treated`      = colSums(reordered[Z == 1, ]),
+      `sum over control`      = colSums(reordered[Z == 0, ]))
+```
+
+Reversing the levels puts `coin` on the treated units, and then its closed-form
+moments and CMRSS's agree:
+
+```{r}
+#| label: agree
+it1 <- independence_test(reordered ~ factor(Z, levels = c(1, 0)) | block,
+                         teststat = "maximum", alternative = "greater",
+                         distribution = "asymptotic")
+rbind(`coin expectation` = as.numeric(expectation(it1)),
+      `CMRSS mu`         = ms$mu,
+      `coin sd`          = sqrt(diag(covariance(it1))),
+      `CMRSS sigma`      = ms$sigma)
+```
+
+The level ordering changes which group is scored, it changes the answer, and it does not error.
+Anyone who reuses `coin` this way needs a test that would catch it, which means
+a test on an unbalanced design.
+
+The reference distributions match too. Both draw within-block assignments with
+the block's treated count fixed, so the only difference between them is Monte
+Carlo noise. At 50,000 draws each:
+
+```{r}
+#| label: quantiles
+#| eval: false
+## continues the `moments` chunk above: same Z, block, mla, bs, w, sla, reordered
+set.seed(11)
+qs <- c(.5, .75, .9, .95, .975, .99)
+nullC <- CMRSS:::com_null_dist_block(Z, block, mla, sla, null.max = 50000,
+                                     weight = w, block.sum = bs)
+it <- independence_test(reordered ~ factor(Z, levels = c(1, 0)) | block,
+                        teststat = "maximum", alternative = "greater",
+                        distribution = approximate(nresample = 50000))
+round(rbind(CMRSS = quantile(nullC, qs), coin = qperm(it, qs)), 4)
+```
+
+```
+         50%    75%    90%    95%  97.5%    99%
+CMRSS 0.3129 0.9629 1.5418 1.9258 2.2468 2.5874
+coin  0.3054 0.9629 1.5712 1.9258 2.2468 2.6242
+```
+
+Three of the six quantiles agree to the last digit printed, which happens
+because the combined statistic on 7 blocks of 12 takes finitely many values and
+both methods land on the same one. The largest of the three gaps that do appear
+is 0.0368, the size of the Monte Carlo error at 50,000 draws, not a difference
+in the statistic.
+
+`coin` computes this distribution in C, through `libcoin`, and the gap widens
+with $n$. Timings for the same three statistics at 10,000 draws, on this
+machine:
+
+```{r}
+#| label: timing
+#| eval: false
+time_both <- function(B, per, nperm = 10000, seed = 1) {
+  set.seed(seed)
+  n <- B * per
+  block <- factor(rep(seq_len(B), each = per))
+  Z <- unlist(lapply(split(seq_len(n), block),
+                     function(ix) sample(rep(0:1, each = per / 2))))
+  mla <- lapply(c(2, 6, 10), function(r)
+    lapply(seq_len(B), function(i)
+      list(name = "Polynomial", r = r, std = TRUE, scale = FALSE)))
+  bs  <- CMRSS:::summary_block(Z, block)
+  w   <- CMRSS:::weight_scheme(bs, "asymp.opt")
+  sla <- lapply(mla, function(m) CMRSS:::score_all_blocks(bs$nb, m))
+  H <- length(mla); reordered <- matrix(0, n, H)
+  for (h in 1:H) for (i in 1:B) {
+    u <- bs$units.block[[i]]; reordered[u, h] <- w[i] / bs$mb[i] * sla[[h]][[i]]
+  }
+  t_cmrss <- system.time(CMRSS:::com_null_dist_block(
+    Z, block, mla, sla, null.max = nperm, weight = w, block.sum = bs))[["elapsed"]]
+  t_coin <- system.time(independence_test(
+    reordered ~ factor(Z, levels = c(1, 0)) | block,
+    teststat = "maximum", alternative = "greater",
+    distribution = approximate(nresample = nperm)))[["elapsed"]]
+  data.frame(blocks = B, n = n, CMRSS = t_cmrss, coin = t_coin,
+             ratio = round(t_cmrss / t_coin, 1))
+}
+do.call(rbind, list(time_both(7, 12), time_both(20, 20), time_both(50, 20)))
+```
+
+```
+ blocks    n CMRSS  coin ratio
+      7   84 0.019 0.017   1.1
+     20  400 0.694 0.096   7.2
+     50 1000 1.665 0.120  13.9
+```
+
+CMRSS's time grows roughly with $n$ because it materializes an $n$-by-chunk
+assignment matrix and multiplies; `coin`'s barely moves over this range.
+
+
+## What `coin` does not reproduce
+
+Four things. Three are structural and one is a design choice you could
+revisit.
+
+The attainable minimum under $H_{k,c}$ has no counterpart. `coin` computes the
+statistic at the observed data. CMRSS needs the statistic minimized over the
+control potential outcomes the null permits, which is `min_stat` in one block
+and the integer program across blocks. Nothing in `coin`'s framework refers to
+potential outcomes at all.
+
+The confidence-interval inversion has no counterpart. `coin` has `confint`
+methods for a few named location-shift tests; there is no general machinery
+for inverting an arbitrary test over a threshold parameter.
+
+The `comb.method = 2` reference distribution cannot be expressed as a `coin`
+statistic. That path (`com_null_dist_block_stratum`) takes the maximum across
+the $H$ methods *within* each block and then sums the block maxima. A maximum
+of sums is a maximum of linear statistics, which is what `coin`'s
+`teststat = "maximum"` computes; a sum of maxima is not linear in the
+assignment vector, so `coin` cannot form it.
+
+The completely randomized path combines by minimum p-value rather than by
+maximum standardized statistic. `comb_null_dist_cre` converts each statistic to
+its tail probability and takes the smallest, then calibrates that minimum
+against its own randomization distribution. This is Tippett's combination, and
+`coin` offers only `"maximum"` and `"quadratic"`. The two are close cousins ---
+both are single-step methods calibrated on the joint null --- but they are not
+the same function, and switching would change your operating characteristics.
+This is the one item on this list that is a choice rather than a wall: the
+draws underneath are still `coin`'s, and the min-p step on top is twelve lines.
+
+
+## SOUP
+
+SOUP implements Pesarin's nonparametric combination, which is the right family
+of ideas --- Fisher, Liptak, Tippett, minP, maxT, direct sums --- and its
+combining-function menu is broader than `coin`'s in exactly the direction the
+CRE path needs. But it will not work here, for three reasons that compound.
+
+CRAN archived it on 2022-06-10 for unresolved check failures, so it cannot be
+a dependency of a package you intend to submit, and no one is maintaining it.
+
+Its test statistics are a fixed list --- Anderson-Darling, difference of means,
+$t$, Hotelling's $T^2$, and a linear-model coefficient. There is no argument
+that accepts a user-supplied score vector, so Stephenson scores at $s = 30$
+cannot be expressed in it.
+
+And it has the same blind spot as `coin` about the third layer. Its stratified
+analysis conditions on a categorical covariate, which handles the design, but
+it computes the observed statistic from the observed data. The minimization
+over null-permitted potential outcomes is simply not in the vocabulary.
+
+I would close SOUP as an option and not revisit it.
+
+
+## How much code this comes to
+
+Counting executable lines --- neither blank nor comment --- in `R/`, and
+assigning each function to exactly one layer:
+
+| layer | lines | share |
+|:---|---:|---:|
+| Scores and design bookkeeping | 73 | 4% |
+| Exact permutation moments | 94 | 5% |
+| Drawing assignments, forming the reference distribution | 237 | 14% |
+| The `comb.method = 2` statistic and reference distribution | 148 | 8% |
+| The attainable minimum under $H_{k,c}$, and the solvers | 439 | 25% |
+| p-value assembly and confidence-interval inversion | 491 | 28% |
+| Benchmark wrappers around RIQITE | 264 | 15% |
+| **total** | **1746** | |
+
+The two layers `coin` computes are the second and third, 331 lines, 19 percent
+of the package. Subtract the twelve lines of min-p calibration that `coin`
+cannot do and it is 319 lines, 18 percent.
+
+The `comb.method = 2` row absorbs `poly_sd` and `poly_strata_sd`, which return
+$\sqrt{1/(2r-1) - 1/r^2}$. That is the standard deviation of $U^{r-1}$ for a
+uniform $U$ --- the large-block limit of the polynomial score's spread --- not a
+permutation moment of the realized design. `mu_sd_block` standardizes the
+stratum-level statistics by it, so `coin` could not supply those numbers even
+if the combination were expressible as one of its statistics.
+
+So: about a fifth could be delegated. And that fifth contains almost none of
+the code you would worry about, because it is the most mechanical and most
+heavily exercised part of the package. The two rows that follow it in the
+table --- the attainable minimum with its solvers, and the p-value assembly
+with the interval inversion --- come to $439 + 491 = 930$ lines, and that is
+where the mathematical content and the fragility both live.
+
+
+## Where the time actually goes
+
+Delegating a fifth of the lines only helps if it saves time. Here is what it
+would save and what it would not.
+
+For a single p-value at $n = 200$ across 10 blocks, three statistics, and
+100,000 draws:
+
+```{r}
+#| label: profile-setup
+#| eval: false
+suppressMessages(library(CMRSS))
+set.seed(99)
+B <- 10; per <- 20; n <- B * per
+block <- factor(rep(seq_len(B), each = per))
+Z <- unlist(lapply(split(seq_len(n), block),
+                   function(ix) sample(rep(0:1, each = per / 2))))
+Y <- rnorm(n) + 0.5 * Z
+mla <- lapply(c(2, 6, 10), function(r)
+  lapply(seq_len(B), function(i)
+    list(name = "Polynomial", r = r, std = TRUE, scale = FALSE)))
+bs  <- CMRSS:::summary_block(Z, block)
+w   <- CMRSS:::weight_scheme(bs, "asymp.opt")
+sla <- lapply(mla, function(m) CMRSS:::score_all_blocks(bs$nb, m))
+ms  <- CMRSS:::mu_sigma_list(Z, block, w, mla, sla, bs)
+m <- sum(Z); k <- floor(0.9 * m)
+```
+
+```{r}
+#| label: profile-pval
+#| eval: false
+t_null <- system.time(CMRSS:::com_null_dist_block(
+  Z, block, mla, sla, null.max = 1e5, weight = w, block.sum = bs))[["elapsed"]]
+t_coef <- system.time(cf <- CMRSS:::comb_matrix_block(
+  Z, Y, block, 0, mla, sla, bs))[["elapsed"]]
+t_lp   <- system.time(CMRSS:::solve_optimization(
+  Z, block, w, cf, m - k, ms, TRUE, bs, "highs"))[["elapsed"]]
+c(null = t_null, coef = t_coef, ilp = t_lp)
+```
+
+```
+  null distribution   3.432 s
+  coefficient matrix  0.031 s
+  integer program     0.159 s
+```
+
+Those three add to 3.622 seconds, of which the reference distribution is 3.432,
+or 95 percent. For a single p-value, then, `coin` would cut the wall clock by
+about a factor of ten.
+
+Before reaching for `coin`, though: `pval_comb_block` already takes a
+`stat.null` argument. The reference distribution depends on the design and the
+score functions, not on the outcomes, so across simulation replicates with a
+fixed design it can be computed once and passed in. That is free, needs no new
+dependency, and saves the same 3.4 seconds. In this project's
+`Analysis/sim_test_fns.R` the question is moot for a different reason: the
+Stephenson comparison there already calls `coin::independence_test` directly,
+with a note recording that `CMRSS::pval_comb_block` was dropped because
+$H_{k,c}$ is the wrong hypothesis for a sharp-null power comparison. So the
+simulations never run this code.
+
+The confidence intervals are where the time goes, and there the picture
+reverses. At the same design, with only 1,000 draws and a tolerance of 0.05,
+one call to `com_block_conf_quant_larger(set = "treat")` took 21.8 seconds. I
+counted the calls and profiled the time:
+
+```{r}
+#| label: profile-ci
+#| eval: false
+## continues the `profile-setup` chunk above
+cnt <- new.env(); cnt$lp <- 0L; cnt$cf <- 0L
+trace(CMRSS:::solve_optimization, tracer = quote(cnt$lp <- cnt$lp + 1L), print = FALSE)
+trace(CMRSS:::comb_matrix_block,  tracer = quote(cnt$cf <- cnt$cf + 1L), print = FALSE)
+Rprof("ci.out", interval = 0.01)
+ci <- com_block_conf_quant_larger(Z, Y, block, set = "treat",
+        methods.list.all = mla, opt.method = "ILP_highs",
+        null.max = 1000, tol = 0.05, alpha = 0.1)
+Rprof(NULL)
+untrace(CMRSS:::solve_optimization); untrace(CMRSS:::comb_matrix_block)
+c(lp = cnt$lp, cf = cnt$cf)
+head(summaryRprof("ci.out")$by.self, 6)
+```
+
+```
+solve_optimization calls: 520    comb_matrix_block calls: 520
+total time: 21.84 s
+
+               self.time self.pct total.time total.pct
+"solver_run"        7.71    35.30       7.71     35.30
+"match.arg"         2.67    12.23       6.26     28.66
+"order"             2.17     9.94       5.82     26.65
+"sort.list"         1.05     4.81       7.80     35.71
+"rank"              0.92     4.21      10.39     47.57
+"min_stat"          0.41     1.88      13.42     61.45
+```
+
+Read the `total.pct` column. `min_stat` accounts for 61 percent of the run, and
+`rank` --- called from inside it --- for 48 percent. HiGHS itself is 35 percent,
+and `match.arg`, which is argument checking inside the `highs` package's R
+interface rather than any solving, is another 12.
+
+Each call to
+`comb_matrix_block` loops over $H = 3$ methods, $B = 10$ blocks, and
+$m_b + 1 = 11$ values of the exempt count, calling `min_stat` once each:
+$3 \times 10 \times 11 = 330$ calls. The confidence-interval search made 520
+such calls, so `min_stat` ran $330 \times 520 = 171{,}600$ times, and each run
+does a full `rank()` over its block.
+
+So the reference distribution, which is the only thing `coin` would replace, is
+not on this list at all. Delegating it changes 21.8 seconds into 21.8 seconds.
+
+
+## The change I would actually make
+
+`min_stat` is called 171,600 times at what are mostly repeated values of $c$,
+and it does not need to be. As a function of $c$ with everything else held
+fixed, it is a step function, it is monotone, and its jump points are known in
+advance.
+
+Here is why. Inside `min_stat`, the treated units the null exempts are chosen
+by their outcome rank, through `sort_treat(Y, Z)`, which looks at $Y$ and not
+at $c$. So the exempt set does not move as $c$ changes. What $c$ changes is the
+imputed value $Y_i - c$ for the non-exempt treated units, and the statistic
+depends on those only through their ranks among all $n_b$ values in the block.
+A treated unit's rank relative to another treated unit never changes, because
+both shift by the same $c$. A treated unit $i$ crosses a control unit $j$
+exactly when $c$ passes $Y_i - Y_j$. So the statistic is constant between
+consecutive values of the set $\{Y_i - Y_j : Z_i = 1, Z_j = 0\}$, which has at
+most $m_b (n_b - m_b)$ elements.
+
+Checked on a 12-unit block with 6 treated, where that bound is $6 \times 6 = 36$:
+
+```{r}
+#| label: stepfun
+set.seed(7)
+nb <- 12; mb <- 6
+Zb <- sample(rep(0:1, each = mb))
+Yb <- round(rnorm(nb), 3)
+score <- CMRSS:::rank_score(nb, list(name = "Polynomial", r = 6,
+                                     std = TRUE, scale = FALSE))
+
+diffs <- sort(unique(outer(Yb[Zb == 1], Yb[Zb == 0], "-")))
+grid  <- seq(min(diffs) - 1, max(diffs) + 1, length.out = 20001)
+step  <- diff(grid)[1]
+
+for (k in c(nb, nb - 2, nb - 5)) {
+  vals  <- vapply(grid, function(cc)
+    CMRSS:::min_stat(Zb, Yb, k, cc, score = score), numeric(1))
+  jumps <- grid[which(diff(vals) != 0) + 1]
+  cat(sprintf(
+    "k = %2d: %3d distinct values, %2d jumps; every jump at a Y1-Y0 difference: %s; monotone: %s\n",
+    k, length(unique(vals)), length(jumps),
+    all(vapply(jumps, function(x) min(abs(x - diffs)) <= step, logical(1))),
+    all(diff(vals) <= 0)))
+}
+cat(sprintf("candidate breakpoints m_b(n_b - m_b) = %d; distinct differences = %d\n",
+            mb * (nb - mb), length(diffs)))
+```
+
+Two consequences follow, and the second matters more than the first.
+
+The coefficient matrices can be built once instead of 520 times. For each
+method $h$, block $b$, and exempt count, sort that block's at most
+$m_b(n_b - m_b)$ differences and evaluate `min_stat` at each, giving a lookup
+table. Every later value of $c$ becomes a `findInterval` call. In the profiled
+design that replaces 171,600 evaluations with $3 \times 10 \times 11 \times 100
+= 33{,}000$ done once. I have not built this, so I will not quote a speedup; the
+61 percent is measured and the replacement is projected.
+
+More important, the confidence limits stop being approximate. The integer
+program's objective depends on $c$ only through those step functions, so it is
+itself a step function of $c$, with jumps confined to the union of the blocks'
+breakpoints --- at most $\sum_b m_b (n_b - m_b)$ values, which is 1,000 in the
+profiled design. The exact confidence limit is one of those values. A bisection
+over the sorted candidate list finds it in about $\log_2(1000) \approx 10$
+solver calls per $k$, and the bracket shrinks as $k$ decreases because the code
+already sets `c.max <- quantiles[k + 1]`.
+
+That would let you delete this, which appears four times in the two
+confidence-interval functions:
+
+```r
+c.sol <- uniroot(f, interval = c(c.min, c.max), extendInt = "downX", tol = tol)$root
+c.sol <- round(c.sol, digits = -log10(tol))
+if (f(c.sol) <= 0) {
+  while (f(c.sol) <= 0) { c.sol <- c.sol - tol }
+  c.sol <- c.sol + tol
+} else {
+  while (f(c.sol) > 0) { c.sol <- c.sol + tol }
+}
+```
+
+Those `while` loops step by `tol` from a rounded root with no iteration cap,
+and each step calls the solver again. They exist because `uniroot` assumes a
+continuous $f$ and $f$ is a step function, so `uniroot` returns a point that
+need not satisfy the inequality the code wants. Searching the breakpoints
+directly removes the assumption violation rather than patching around it, and
+returns the exact limit instead of one accurate to `tol`.
+
+One caution. `min_stat` breaks rank ties with `ties.method = "first"`, so its
+value *at* a breakpoint depends on that convention. An exact search should
+evaluate just below and just above each candidate rather than at it, and the
+tests should pin down which side the reported limit takes.
+
+A second, independent change sits next to this one, and it takes less work. `match.arg` at 12 percent of self
+time is argument checking inside `highs`, repeated on all 520 calls for a
+problem with $\sum_b (m_b + 1) + H + 1 = 114$ variables. A 114-variable linear
+program does not take 15 milliseconds to solve; it takes that long to set up
+through the R interface. Only the objective coefficients change between calls,
+so building the model once and updating those would cut into the 35 percent as
+well.
+
+
+## On moving to C++
+
+I would not, and the profile is the reason.
+
+HiGHS is already compiled C++; `coin` and `libcoin` are already compiled C. The
+two places where CMRSS's own R code is hot are the reference distribution ---
+which `coin` computes in C, and which the existing `stat.null` argument lets
+you compute once anyway --- and `min_stat`, whose 61 percent disappears under
+the precomputation above, because the work is redundant rather than slow. After
+those two changes there is no R-level hot spot left for C++ to attack. Writing
+one would add a compilation toolchain requirement to a package whose remaining
+bottleneck is 520 round trips into someone else's compiled solver.
+
+If a C++ target ever does appear, the honest place to look for it first is
+riposte's `perm.R`, whose own header calls it "the seam for a future
+C++/Rust backend" and which is the only loop over permutations in that
+package.
+
+
+## Should CMRSS and riposte be one package
+
+No, and the reason is the null hypothesis rather than any judgment about code
+overlap.
+
+The two packages share four of the five things I listed at the start. Both
+build a unit-level score matrix from a transformation of the outcome. Both need
+the exact permutation moments of a linear statistic under block randomization
+--- CMRSS in `mu_sigma_list`, riposte in `riposte_sw_moments`, and I verified
+above that `coin` reproduces CMRSS's, while riposte's function documentation
+records that it was verified against `coin` too. Both draw block-respecting
+assignments. Both combine several statistics into one and refer the result to
+the randomization distribution.
+
+They differ at the third layer, and the difference is not bridgeable by a
+shared function. riposte tests the sharp null that every individual effect is
+zero, so it knows every unit's control outcome and evaluates its statistic at
+the observed data --- `crossprod(draws, scores)`, row one. CMRSS tests
+$H_{k,c}$, which leaves the control outcomes partly unknown, so its observed
+statistic is the solution of an optimization problem. A package built around
+the first cannot express the second by adding an argument.
+
+They also differ in how they combine. riposte uses a quadratic form with the
+full permutation covariance, a Cauchy combination of mid-p values, and a
+maximum. CMRSS uses a maximum of standardized statistics in the stratified case
+and a minimum p-value in the completely randomized case. There is no conflict
+here --- these are five combining functions and both packages could in
+principle offer all five --- but it does mean the combination layer is not a
+single shared object today.
+
+And the authorship differs. CMRSS is Kim and Li's method with you as a
+contributor; riposte is yours. Merging would tangle the citation and the
+maintenance.
+
+What I would share instead is the *test contract*, which riposte has already
+adopted: `coin` in `Suggests`, and tests that check the permutation moments and
+the reference-distribution quantiles against it. CMRSS does not currently have
+those tests. Adding them takes little work and no runtime dependency, and it is
+the answer to "is our custom code as well tested as the library's" --- because
+it makes the library the test. The unbalanced-block check in this memo is the
+version of that test I would write first, since the balanced version would have
+passed while `coin` scored the wrong group.
+
+
+## Two smaller things I noticed
+
+`pval_comb_block` returns `mean(stat.null >= stat.min)`, which does not include
+the observed assignment in either the numerator or the denominator. riposte's
+`riposte_perm_pvalue` does include it, giving
+$(1 + \#\{\text{draws} \ge \text{observed}\}) / (1 + R)$, where $R$ is the
+number of draws. The gap is of order $1/R$, so at the default 100,000 draws it
+is $10^{-5}$, far below anything that
+changes a decision. I flag it as a convention difference between your two
+packages rather than as a defect. Under $H_{k,c}$ the quantity
+being compared is an optimization minimum rather than the statistic at the
+observed assignment, so whether the usual $+1$ argument transfers is a question
+for the paper's validity theorem, not one I can settle from the code.
+
+`coin` will give the maximum statistic's reference distribution asymptotically,
+through a multivariate normal on the standardized statistics, which would make
+the confidence-interval threshold `thres` deterministic and remove Monte Carlo
+error from the endpoints. I mention it because it is available and takes one line, not
+because I recommend it: Kim and Li's validity is a finite-sample randomization
+argument, and trading it for an asymptotic one to save a threshold calculation
+is a bad exchange.
+
+
+## What I would do, in order
+
+1. Add tests to CMRSS that check `mu_sigma_list` and the reference-distribution
+   quantiles against `coin`, on an unbalanced design, with `coin` in
+   `Suggests`. This is the smallest change on the list and it answers the
+   testing question directly.
+
+2. Replace `min_stat`'s repeated evaluation with a per-block step-function
+   table, and replace the `uniroot`-plus-`while` search with a bisection over
+   the union of breakpoints. This gives exact confidence limits, deletes the
+   four uncapped `while` loops, and removes the 61 percent.
+
+3. Leave the reference distribution in R, but make sure every caller that can
+   reuse `stat.null` does. If profiling after step 2 still shows it, swap in
+   `coin` behind the existing function signature for the `Z.perm = NULL` path,
+   which is the one `pval_comb_block` uses. `coin` has no way to accept a
+   supplied assignment matrix, so the `Z.perm` path that
+   `com_block_conf_quant_larger` passes through would have to stay in R.
+
+4. Do not write C++. Do not use SOUP. Keep CMRSS and riposte separate.
