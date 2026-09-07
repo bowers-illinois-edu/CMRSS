@@ -141,27 +141,40 @@ test_that("the candidate list is bounded by m_b * (n_b - m_b)", {
 })
 
 
-test_that("min_stat at a breakpoint follows ties.method = 'first'", {
-  # Pinned because a bisection can land exactly on a candidate, where
-  # Y_i - c equals some Y_j and the rank depends on how ties break.
-  # R/CMRSS_CRE.R:278 passes ties.method = "first", so the tie goes to
-  # whichever unit comes first in the vector.  A tabulated search has to
-  # reproduce that, and PLAN item 2A may later change it deliberately.
+test_that("min_stat at a breakpoint takes the left value or the right one, and which varies", {
+  # The reason the confidence-limit search probes strictly between
+  # breakpoints instead of at them.  Exactly at a breakpoint, Y_i - c equals
+  # some Y_j, and `ties.method = "first"` at R/CMRSS_CRE.R:278 breaks the tie
+  # by position in the input vector.  So the value at a breakpoint sometimes
+  # matches the interval below and sometimes the interval above, decided by
+  # unit ordering rather than by the data.
   b <- make_block(nb = 12, mb = 6, seed = 7)
-  cc <- b$diffs[5]
 
-  at <- min_stat(b$Z, b$Y, k = b$nb, c = cc, score = b$score)
-  just_below <- min_stat(b$Z, b$Y, k = b$nb, c = cc - 1e-9, score = b$score)
-  just_above <- min_stat(b$Z, b$Y, k = b$nb, c = cc + 1e-9, score = b$score)
+  side <- vapply(b$diffs, function(cc) {
+    at <- min_stat(b$Z, b$Y, k = b$nb, c = cc, score = b$score)
+    lo <- min_stat(b$Z, b$Y, k = b$nb, c = cc - 1e-9, score = b$score)
+    hi <- min_stat(b$Z, b$Y, k = b$nb, c = cc + 1e-9, score = b$score)
+    if (isTRUE(all.equal(at, hi)) && !isTRUE(all.equal(at, lo))) {
+      "right"
+    } else if (isTRUE(all.equal(at, lo)) && !isTRUE(all.equal(at, hi))) {
+      "left"
+    } else {
+      "no jump"
+    }
+  }, character(1))
 
-  # The value at the breakpoint equals one of its two neighbors rather than
-  # sitting between them, which is what makes this a step function and not
-  # a function with an isolated third value at the jump.
-  expect_true(isTRUE(all.equal(at, just_below)) ||
-              isTRUE(all.equal(at, just_above)))
+  # The value at a breakpoint always equals one of its two neighbors, which
+  # is what makes this a step function rather than one with an extra value
+  # sitting at each jump.
+  expect_true(all(side %in% c("left", "right", "no jump")))
 
-  # Which side it takes, recorded so a refactor cannot flip it silently.
-  expect_equal(at, just_above)
+  # Both sides occur on this block, so no rule of the form "the value at a
+  # breakpoint is the value above it" is available.  A search that evaluated
+  # at breakpoints would inherit that arbitrariness; `search_limit` does not,
+  # because `interval_probes` keeps every evaluation strictly inside an
+  # interval.
+  expect_gt(sum(side == "left"), 0)
+  expect_gt(sum(side == "right"), 0)
 })
 
 

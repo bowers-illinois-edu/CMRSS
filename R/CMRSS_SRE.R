@@ -1210,6 +1210,41 @@ com_block_conf_quant_larger_trt <- function(Z, Y,
 
   thres <- sort(stat.null, decreasing = TRUE)[floor(null.max * alpha) + 1]
 
+  # The statistic changes only at the within-block treated-minus-control
+  # differences, so the confidence limit is one of them and the search can be
+  # a binary search over the sorted list rather than a root-find followed by a
+  # walk in steps of `tol`.  See R/breakpoints.R for the argument.
+  breakpoints <- min_stat_breakpoints(Z, Y, block, block.sum)
+  probes <- interval_probes(breakpoints)
+
+  # The coefficient matrices depend on the threshold but not on k, while the
+  # optimization depends on k through the coverage bound p.  The loop below
+  # runs over every k and revisits thresholds, so building them behind a cache
+  # keeps each threshold's matrices to one construction.
+  build_coef <- memoize_on_threshold(function(c) {
+    if (comb.method == 1) {
+      comb_matrix_block(Z, Y, block, c, methods.list.all, scores.list.all,
+                        block.sum)
+    } else {
+      max_comb_matrix_block_stratum(Z, Y, block, c, methods.list.all,
+                                    scores.list.all, block.sum,
+                                    weight = weight)
+    }
+  })
+
+  # Distance of the combined statistic above the rejection threshold.  It is
+  # non-increasing in c, positive where the test rejects H_{k,c}.
+  excess <- function(c, p) {
+    if (comb.method == 1) {
+      stat.min <- solve_optimization(Z, block, weight, build_coef(c), p,
+                                     ms_list, exact, block.sum, solver)$obj
+    } else {
+      stat.min <- solve_stratum_optimization(build_coef(c), p, exact = exact,
+                                             solver = solver)$obj
+    }
+    stat.min - thres
+  }
+
   Y1.max <- max(Y[Z == 1])
   Y1.min <- min(Y[Z == 1])
   Y0.max <- max(Y[Z == 0])
@@ -1229,18 +1264,7 @@ com_block_conf_quant_larger_trt <- function(Z, Y,
       }
       p <- n - k
 
-      f <- function(c) {
-        if (comb.method == 1) {
-          coeflists <- comb_matrix_block(Z, Y, block, c, methods.list.all, scores.list.all, block.sum)
-          stat.min <- solve_optimization(Z, block, weight, coeflists, p, ms_list,
-                                          exact, block.sum, solver)$obj
-        } else {
-          coeflist <- max_comb_matrix_block_stratum(Z, Y, block, c, methods.list.all,
-                                                    scores.list.all, block.sum, weight = weight)
-          stat.min <- solve_stratum_optimization(coeflist, p, exact = exact, solver = solver)$obj
-        }
-        return(stat.min - thres)
-      }
+      f <- function(c) excess(c, p)
 
       tmp1 <- f(c.min)
       tmp2 <- f(c.max)
@@ -1251,19 +1275,7 @@ com_block_conf_quant_larger_trt <- function(Z, Y,
         c.sol <- c.max
       }
       if (tmp1 > 0 & tmp2 <= 0) {
-        c.sol <- uniroot(f, interval = c(c.min, c.max), extendInt = "downX", tol = tol)$root
-        c.sol <- round(c.sol, digits = -log10(tol))
-
-        if (f(c.sol) <= 0) {
-          while (f(c.sol) <= 0) {
-            c.sol <- c.sol - tol
-          }
-          c.sol <- c.sol + tol
-        } else {
-          while (f(c.sol) > 0) {
-            c.sol <- c.sol + tol
-          }
-        }
+        c.sol <- search_limit(f, breakpoints, probes, c.min, c.max)
       }
       quantiles[k] <- c.sol
 
@@ -1295,18 +1307,7 @@ com_block_conf_quant_larger_trt <- function(Z, Y,
         c.max <- quantiles[j + 1]
       }
 
-      f <- function(c) {
-        if (comb.method == 1) {
-          coeflists <- comb_matrix_block(Z, Y, block, c, methods.list.all, scores.list.all, block.sum)
-          stat.min <- solve_optimization(Z, block, weight, coeflists, p, ms_list,
-                                          exact, block.sum, solver)$obj
-        } else {
-          coeflist <- max_comb_matrix_block_stratum(Z, Y, block, c, methods.list.all,
-                                                    scores.list.all, block.sum = NULL, weight = weight)
-          stat.min <- solve_stratum_optimization(coeflist, p, exact = exact, solver = solver)$obj
-        }
-        return(stat.min - thres)
-      }
+      f <- function(c) excess(c, p)
 
       tmp1 <- f(c.min)
       tmp2 <- f(c.max)
@@ -1316,20 +1317,8 @@ com_block_conf_quant_larger_trt <- function(Z, Y,
       if (tmp2 > 0) {
         c.sol <- c.max
       }
-      if (f(c.min) > 0 & f(c.max) <= 0) {
-        c.sol <- uniroot(f, interval = c(c.min, c.max), extendInt = "downX",
-                         tol = tol)$root
-        c.sol <- round(c.sol, digits = -log10(tol))
-        if (f(c.sol) <= 0) {
-          while (f(c.sol) <= 0) {
-            c.sol <- c.sol - tol
-          }
-          c.sol <- c.sol + tol
-        } else {
-          while (f(c.sol) > 0) {
-            c.sol <- c.sol + tol
-          }
-        }
+      if (tmp1 > 0 & tmp2 <= 0) {
+        c.sol <- search_limit(f, breakpoints, probes, c.min, c.max)
       }
       quantiles[j] <- c.sol
 

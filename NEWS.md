@@ -1,3 +1,36 @@
+# CMRSS 0.2.10
+
+## Confidence limits are now exact
+
+- `com_block_conf_quant_larger()` and `com_block_conf_quant_larger_trt()`
+  locate each limit by binary search over the thresholds at which the
+  combined statistic can change, rather than by `uniroot()` followed by a
+  walk in steps of `tol`. The statistic is a step function of the threshold
+  `c` whose jumps occur only at the within-block differences `Y_i - Y_j`
+  between a treated unit `i` and a control unit `j`, so the limit is one of
+  those differences and can be found exactly.
+
+- **This moves published numbers.** Limits shift by less than `tol` and
+  always downward, because the old search could stop above the true
+  infimum and so exclude thresholds the test does not reject. On the test
+  design the four finite limits moved by -0.016, -0.038, -0.039, and
+  -0.044 at `tol = 0.05`. Intervals are therefore slightly wider, and
+  `tol` no longer affects the answer.
+
+- New internal helpers in `R/breakpoints.R`: `min_stat_breakpoints()`,
+  `interval_probes()`, `binary_search_first()`, `search_limit()`, and
+  `memoize_on_threshold()`.
+
+- The search evaluates the statistic strictly between breakpoints, never at
+  one. At a breakpoint `Y_i - c` equals `Y_j` and `ties.method = "first"`
+  resolves the tie by input order, so the value there follows unit ordering
+  rather than the data. Keeping evaluations inside the intervals removes
+  that dependence and leaves the search unaffected by PLAN item 2A.
+
+- Coefficient matrices are cached on the threshold, since they do not
+  depend on the quantile index while the optimization that consumes them
+  does.
+
 # CMRSS 0.2.9
 
 ## PLAN item 1B settled: the wider column range was redundant, not wrong
