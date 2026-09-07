@@ -102,7 +102,30 @@ Status update from initial reproducer: `pval_comb_block(Z, Y, k=19, c=0, ...)` w
 
 ---
 
-### [ ] 1B. Verify column range `0:nb[i]` in `comb_matrix_block_stratum` against paper eq:comb_per_stratum
+### [x] 1B. Verify column range `0:nb[i]` in `comb_matrix_block_stratum` against paper eq:comb_per_stratum
+
+**Closed 2026-09-07 (CMRSS 0.2.9). No bug;
+redundant enumeration removed, no numerical change.**
+
+The index counts treated units in the block whose effect exceeds `c`, so it
+cannot exceed `m_b`. `min_stat` exempts `min(m, n - k)` units
+(`R/CMRSS_CRE.R:275`), so every column past `m_b` repeated the `m_b`
+column's statistic. The stratum solver selects one column per block and
+charges its index against a shared budget (`sum index * x <= p`,
+`HiGHS_sol_stratum_com`), so a repeated column with a larger index is
+dominated: it can never improve a minimum. Narrowing the range to `0:m_b`
+therefore changes no answer, which
+`tests/testthat/test-comb-matrix-block-stratum-range.R` confirms by
+rebuilding the wider matrix and comparing the solver's objective at every
+budget from 0 to `sum(m_b)`, and by pinning a `comb.method = 2` p-value
+end to end.
+
+The paper's `eq:comb_per_stratum` (`main.tex:1345`) defines the per-stratum
+statistic and does not fix the enumeration range, so it neither supports nor
+contradicts the old code; the argument above comes from the solver's budget
+constraint instead.
+
+Original investigation notes follow.
 
 - (a) Investigate
   - [ ] Compare `comb_matrix_block` (`R/CMRSS_SRE.R:487-535`, line 520 uses `0:mb[i]`) to `comb_matrix_block_stratum` (`R/CMRSS_SRE.R:661-719`, line 704 uses `0:nb[i]`). They use different ranges for what looks like the same enumeration over "number of treated units in this block whose effect exceeds c."

@@ -697,17 +697,22 @@ comb_matrix_block_stratum <- function(Z, Y, block, c,
     for(i in 1:B){
       Zb = Z[ units.block[[i]] ]
       Yb = Y[ units.block[[i]] ]
-      Ti = matrix(nrow = 2, ncol = nb[i] + 1)
-      Ti[1,] = 0 : nb[i]
+      # Columns are exempt counts, and the exempt count is the number of
+      # treated units in the block whose effect exceeds c, so it stops at
+      # mb[i].  min_stat exempts min(m, n - k) units (R/CMRSS_CRE.R:275),
+      # so columns beyond mb[i] repeated the mb[i] column's value while
+      # carrying a larger index into the solver's budget constraint.  They
+      # were dominated rather than wrong, and dropping them changes no
+      # answer; tests/testthat/test-comb-matrix-block-stratum-range.R
+      # checks that across every budget.
+      Ti = matrix(nrow = 2, ncol = mb[i] + 1)
+      Ti[1,] = 0 : mb[i]
 
-      method.list = method.list.all[[i]]
       score = score.list.all[[i]]
 
-      for(ii in 0 : nb[i]){
-        tmp = ( 1 / mb[i] * min_stat(Zb, Yb, nb[i] - ii, c, method.list = method.list, score = score) - mu.vec[i] ) / sd.vec[i]
-        rank_stat = weight[i] * tmp
-        Ti[2, ii + 1] = rank_stat
-      }
+      # One ranking gives the whole column sequence; see min_stat_path().
+      Ti[2,] = weight[i] *
+        ( 1 / mb[i] * min_stat_path(Zb, Yb, c, score) - mu.vec[i] ) / sd.vec[i]
       Tlist[[i]] = Ti
     }
     total.list[[l]] <- Tlist
@@ -729,7 +734,12 @@ comb_matrix_block_stratum <- function(Z, Y, block, c,
 max_comb_matrix_block_stratum <- function(Z, Y, block, c, methods.list.all, scores.list.all = NULL, block.sum = NULL,
                                           weight){
 
-  tmp.list = comb_matrix_block_stratum(Z, Y, block, c, methods.list.all, scores.list.all = NULL, block.sum = NULL, weight = weight)
+  # Forward the caller's precomputed scores and block summary rather than
+  # passing NULL, which made comb_matrix_block_stratum rebuild both at every
+  # threshold the confidence-interval search visits.
+  tmp.list = comb_matrix_block_stratum(Z, Y, block, c, methods.list.all,
+                                       scores.list.all = scores.list.all,
+                                       block.sum = block.sum, weight = weight)
   s = length(tmp.list[[1]])  # number of blocks
   result.list = lapply(seq_len(s), function(j){
     mats = lapply(tmp.list, '[[', j)

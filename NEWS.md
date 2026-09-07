@@ -1,3 +1,25 @@
+# CMRSS 0.2.9
+
+## PLAN item 1B settled: the wider column range was redundant, not wrong
+
+- `comb_matrix_block_stratum()` enumerated exempt counts `0:n_b` where the
+  index counts treated units whose effect exceeds the threshold and so
+  cannot exceed `m_b`. `min_stat()` exempts `min(m, n - k)` units, so every
+  column past `m_b` repeated the `m_b` column's value while carrying a
+  larger index into the stratum solver's budget constraint. Such a column
+  uses more of that budget for the same objective, so no optimal solution
+  used one.
+
+- **No number changes.** The range is now `0:m_b`. `comb.method = 2`
+  p-values are identical. The tests rebuild the wider matrix and confirm
+  the solver returns the same objective at every budget from 0 to
+  `sum(m_b)`.
+
+- `comb_matrix_block_stratum()` also uses `min_stat_path()` now, and
+  `max_comb_matrix_block_stratum()` forwards the caller's precomputed
+  scores and block summary instead of passing `NULL` and making them be
+  rebuilt at every threshold.
+
 # CMRSS 0.2.8
 
 ## One ranking per block instead of m_b + 1
