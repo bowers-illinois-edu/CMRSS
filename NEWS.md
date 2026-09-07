@@ -1,3 +1,21 @@
+# CMRSS 0.2.8
+
+## One ranking per block instead of m_b + 1
+
+- `comb_matrix_block()` obtains the whole sequence of exempt counts from a
+  single call to `rank()` through the new internal `min_stat_path()`, in
+  place of `m_b + 1` separate `min_stat()` calls that each re-ran
+  `sort_treat()` and `rank()` over the same block.
+
+- **No number changes.** The identity is exact, not an approximation: the
+  exempted units are the treated units with the largest ranks, so every
+  remaining rank is its original shifted up by the exempt count, and the
+  exempted units occupy the lowest ranks and are all treated, so they
+  contribute a fixed partial sum of the scores. Checked against
+  `min_stat()` on 1,200 random designs with ties and at exact breakpoints,
+  agreeing to 1e-10, and `comb_matrix_block()` is pinned against stored
+  values.
+
 # CMRSS 0.2.7
 
 ## Documentation

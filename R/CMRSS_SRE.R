@@ -520,13 +520,10 @@ comb_matrix_block <- function(Z, Y, block, c, methods.list.all, scores.list.all 
       Ti = matrix(nrow = 2, ncol = mb[i] + 1)
       Ti[1,] = 0:mb[i]
 
-      for(ii in 0 : mb[i]){
-
-        method.list = method.list.all[[i]]
-        score = score.list.all[[i]]
-
-        Ti[2, ii + 1] = min_stat(Zb, Yb, nb[i] - ii, c, method.list = method.list, score = score)
-      }
+      # The whole ii sequence comes from one ranking rather than from
+      # mb[i] + 1 separate calls, each of which re-ran sort_treat and rank
+      # over the same block.  See min_stat_path() in R/breakpoints.R.
+      Ti[2, ] = min_stat_path(Zb, Yb, c, score.list.all[[i]])
       Tlist[[i]] = Ti
     }
     total.list[[l]] <- Tlist

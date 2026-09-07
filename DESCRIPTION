@@ -1,7 +1,11 @@
 Package: CMRSS
 Type: Package
 Title: Combining Multiple Rank Sum Statistics
-Version: 0.2.7
+<<<<<<< HEAD
+Version: 0.2.8
+=======
+Version: 0.2.9
+>>>>>>> 91bd44b (Compute a block's whole exempt-count sequence from one ranking)
 Description: Randomization inference for quantiles of individual treatment
     effects using combined rank sum statistics. Supports both completely
     randomized experiments (CRE) and stratified randomized experiments (SRE).
