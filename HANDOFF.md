@@ -45,10 +45,9 @@ back; the active authors are Jake and Xinran Li. Jake has `push: true`
 on David’s repo and no branch protection exists there, so he can push
 directly or merge his own pull request without David acting.
 
-The branch `min-stat-breakpoints` is local and unpushed as of the
-2026-09-07 morning, then pushed to `origin` only at the end of that day.
-It sits two commits above `main` and holds the one change that moves
-published numbers.
+The branch `min-stat-breakpoints` is on `origin` and deliberately not on
+the canonical repo. It sits two commits above `main` and holds the one
+change that moves published numbers.
 
 ### What happened on 2026-09-07
 
@@ -184,7 +183,8 @@ RIQITE uses the `k_R = k_C + (n - m)` translation under a shared
 correct; tests and function documentation are in place.
 `devtools::check()` is clean (0 errors, 0 warnings, 2 pre-existing
 repo-hygiene NOTEs). `main` was at `99af2eb` when this paragraph was
-written; as of 2026-09-07 it is `b198562`. Working tree should be clean.
+written and has moved several times since; the 2026-09-08 section at the
+top of this file has the current state. Working tree should be clean.
 
 **Status of the older “paused indefinitely” framing below: stale.** The
 2026-04-28 section and several below it describe a state of waiting for
