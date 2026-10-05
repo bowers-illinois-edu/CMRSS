@@ -9,7 +9,7 @@ treatment effects in stratified randomized experiments."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">CMRSS</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.11</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.15</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -18,6 +18,10 @@ treatment effects in stratified randomized experiments."></head><body>
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/harm.html">Could anyone have been harmed?</a></li>
+  </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
@@ -116,19 +120,27 @@ produce equivalent results.</p></dd>
 <dt id="arg-stat-null">stat.null<a class="anchor" aria-label="anchor" href="#arg-stat-null"></a></dt>
 <dd><p>An vector whose empirical distribution
 approximates the randomization distribution of the combined
-stratified rank sum statistic.</p></dd>
+stratified rank sum statistic. With <code>set = "control"</code> it must be
+the null distribution for the relabeled experiment, in which the
+control units are treated. It cannot be used with <code>set = "all"</code>,
+because the two halves need different null distributions; supply
+<code>Z.perm</code> instead.</p></dd>
 
 
 <dt id="arg-null-max">null.max<a class="anchor" aria-label="anchor" href="#arg-null-max"></a></dt>
 <dd><p>A positive integer representing the number of
 permutations for approximating the randomization distribution of
-the rank sum statistic.</p></dd>
+the rank sum statistic. Ignored when <code>Z.perm</code> or
+<code>stat.null</code> is supplied: the number of columns of <code>Z.perm</code>,
+or the length of <code>stat.null</code>, is used instead.</p></dd>
 
 
 <dt id="arg-z-perm">Z.perm<a class="anchor" aria-label="anchor" href="#arg-z-perm"></a></dt>
 <dd><p>Optional pre-computed n x null.max matrix of permuted
-treatment assignments. If provided, this matrix will be used instead
-of generating new permutations. Can be generated using
+treatment assignments, in the original labeling (1 = treated). If
+provided, this matrix will be used instead of generating new
+permutations; for the control bounds the function uses
+<code>1 - Z.perm</code>. Can be generated using
 <code>assign_block(summary_block(Z, block), null.max)</code>.</p></dd>
 
 
