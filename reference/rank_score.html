@@ -9,7 +9,7 @@ Stephenson, and Polynomial rank scores."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">CMRSS</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.22</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.23</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -69,6 +69,8 @@ choose(n - 1, s - 1), so scores run from 0 to 1. FALSE gives the
 binomial coefficients choose(r - 1, s - 1) themselves.</p></li>
 <li><p><code>r</code>: (for Polynomial) the power parameter</p></li>
 <li><p><code>std</code>: (for Polynomial) logical, use Puri(1965) normalization</p></li>
+<li><p><code>j</code>: (for TopCount and Ramp) the number of top ranks the
+score looks at, a whole number from 1 to n</p></li>
 <li><p><code>scale</code>: logical, standardize scores to mean 0 and sd 1</p></li>
 </ul></dd>
 
@@ -92,7 +94,18 @@ each stratum's scores are divided by a different number: undivided, a
 stratum of 100 with s = 10 has top score choose(99, 9) = 1.7e12 and a
 stratum of 20 has choose(19, 9) = 92,378, so the larger stratum carries
 nearly all the weight.
-Wilcoxon scores are simply the ranks 1 to n.</p>
+Wilcoxon scores are simply the ranks 1 to n.
+TopCount scores are 1 at the top j ranks and 0 below, so the rank sum
+over the treated units is the number of treated units among the top j
+ranks, which under complete randomization and no effect is
+hypergeometric. Ramp scores are 0 below rank n - j and rise in equal
+steps, 1/j, 2/j, ..., 1, over the top j ranks, so they order the units
+within the top j where the count does not. Every nondecreasing score is a
+nonnegative mixture of TopCount scores over j (its increments are the
+weights), which is how a polynomial score averages top-rank counts over
+many j; these two are the ends of that construction, for use beside the
+polynomial and Stephenson scores in the combined test. Both are
+nondecreasing, as the worst case over the exempt units requires.</p>
     </div>
 
     <div class="section level2">
@@ -105,6 +118,10 @@ Wilcoxon scores are simply the ranks 1 to n.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0 0 1 3 6</span>
 <span class="r-in"><span><span class="fu">rank_score</span><span class="op">(</span><span class="fl">5</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>name <span class="op">=</span> <span class="st">"Polynomial"</span>, r <span class="op">=</span> <span class="fl">2</span>, std <span class="op">=</span> <span class="cn">TRUE</span>, scale <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0.1666667 0.3333333 0.5000000 0.6666667 0.8333333</span>
+<span class="r-in"><span><span class="fu">rank_score</span><span class="op">(</span><span class="fl">5</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>name <span class="op">=</span> <span class="st">"TopCount"</span>, j <span class="op">=</span> <span class="fl">2</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0 0 0 1 1</span>
+<span class="r-in"><span><span class="fu">rank_score</span><span class="op">(</span><span class="fl">5</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>name <span class="op">=</span> <span class="st">"Ramp"</span>, j <span class="op">=</span> <span class="fl">3</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0.0000000 0.0000000 0.3333333 0.6666667 1.0000000</span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

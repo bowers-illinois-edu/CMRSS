@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">CMRSS</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.22</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.23</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -36,6 +36,15 @@
       <small>Source: <a href="https://github.com/davidk91919/CMRSS/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.2.23" id="cmrss-0223">CMRSS 0.2.23<a class="anchor" aria-label="anchor" href="#cmrss-0223"></a></h2>
+<div class="section level3">
+<h3 id="added-0-2-23">Added<a class="anchor" aria-label="anchor" href="#added-0-2-23"></a></h3>
+<ul><li>Two rank scores that look at the top j ranks alone, specified like the others by name: <code>list(name = "TopCount", j = 3)</code> is 1 at the top three ranks and 0 below, so the rank sum over the treated units is the number of treated units among the top three ranks (hypergeometric under no effect); <code>list(name = "Ramp", j = 4)</code> is 0 below rank n - 4 and 1/4, 2/4, 3/4, 1 at the top four. Both are nondecreasing, so the worst case over the exempt units and every function that builds scores by name (<code><a href="../reference/null_dist.html">null_dist()</a></code>, <code><a href="../reference/min_stat.html">min_stat()</a></code>, <code><a href="../reference/comb_p_val_cre.html">comb_p_val_cre()</a></code>, the stratified test) take them without change. Written for the regret study of combined_stephenson_tests (README 8.12 there), which compares them with the polynomial scores at the same scales.</li>
+<li>
+<code><a href="../reference/rank_score.html">rank_score()</a></code> now stops with a message that names the known scores when given a name it does not know, instead of failing on an undefined variable.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.2.22" id="cmrss-0222">CMRSS 0.2.22<a class="anchor" aria-label="anchor" href="#cmrss-0222"></a></h2>
 <div class="section level3">

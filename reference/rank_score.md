@@ -35,6 +35,9 @@ rank_score(
 
   - `std`: (for Polynomial) logical, use Puri(1965) normalization
 
+  - `j`: (for TopCount and Ramp) the number of top ranks the score looks
+    at, a whole number from 1 to n
+
   - `scale`: logical, standardize scores to mean 0 and sd 1
 
 ## Value
@@ -55,7 +58,18 @@ strata of unequal size it changes the test, because each stratum's
 scores are divided by a different number: undivided, a stratum of 100
 with s = 10 has top score choose(99, 9) = 1.7e12 and a stratum of 20 has
 choose(19, 9) = 92,378, so the larger stratum carries nearly all the
-weight. Wilcoxon scores are simply the ranks 1 to n.
+weight. Wilcoxon scores are simply the ranks 1 to n. TopCount scores are
+1 at the top j ranks and 0 below, so the rank sum over the treated units
+is the number of treated units among the top j ranks, which under
+complete randomization and no effect is hypergeometric. Ramp scores are
+0 below rank n - j and rise in equal steps, 1/j, 2/j, ..., 1, over the
+top j ranks, so they order the units within the top j where the count
+does not. Every nondecreasing score is a nonnegative mixture of TopCount
+scores over j (its increments are the weights), which is how a
+polynomial score averages top-rank counts over many j; these two are the
+ends of that construction, for use beside the polynomial and Stephenson
+scores in the combined test. Both are nondecreasing, as the worst case
+over the exempt units requires.
 
 ## Examples
 
@@ -68,4 +82,8 @@ rank_score(5, list(name = "Stephenson", s = 3, divide_by_top = FALSE, scale = FA
 #> [1] 0 0 1 3 6
 rank_score(5, list(name = "Polynomial", r = 2, std = TRUE, scale = FALSE))
 #> [1] 0.1666667 0.3333333 0.5000000 0.6666667 0.8333333
+rank_score(5, list(name = "TopCount", j = 2))
+#> [1] 0 0 0 1 1
+rank_score(5, list(name = "Ramp", j = 3))
+#> [1] 0.0000000 0.0000000 0.3333333 0.6666667 1.0000000
 ```

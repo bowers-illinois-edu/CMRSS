@@ -22,8 +22,6 @@ Useful links:
 
 Authors:
 
-- David Kim <davidk9@illinois.edu>
-
 - Xinran Li <xinranli@uchicago.edu>
 
 Other contributors:
