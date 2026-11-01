@@ -22,7 +22,6 @@ Useful links:
 
 Authors:
 \itemize{
-  \item David Kim \email{davidk9@illinois.edu}
   \item Xinran Li \email{xinranli@uchicago.edu}
 }
 

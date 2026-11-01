@@ -79,6 +79,8 @@ assign_CRE <- function(n, m, nperm){
 #'       binomial coefficients choose(r - 1, s - 1) themselves.
 #'     \item \code{r}: (for Polynomial) the power parameter
 #'     \item \code{std}: (for Polynomial) logical, use Puri(1965) normalization
+#'     \item \code{j}: (for TopCount and Ramp) the number of top ranks the
+#'       score looks at, a whole number from 1 to n
 #'     \item \code{scale}: logical, standardize scores to mean 0 and sd 1
 #'   }
 #'
@@ -99,15 +101,48 @@ assign_CRE <- function(n, m, nperm){
 #' stratum of 20 has choose(19, 9) = 92,378, so the larger stratum carries
 #' nearly all the weight.
 #' Wilcoxon scores are simply the ranks 1 to n.
+#' TopCount scores are 1 at the top j ranks and 0 below, so the rank sum
+#' over the treated units is the number of treated units among the top j
+#' ranks, which under complete randomization and no effect is
+#' hypergeometric. Ramp scores are 0 below rank n - j and rise in equal
+#' steps, 1/j, 2/j, ..., 1, over the top j ranks, so they order the units
+#' within the top j where the count does not. Every nondecreasing score is a
+#' nonnegative mixture of TopCount scores over j (its increments are the
+#' weights), which is how a polynomial score averages top-rank counts over
+#' many j; these two are the ends of that construction, for use beside the
+#' polynomial and Stephenson scores in the combined test. Both are
+#' nondecreasing, as the worst case over the exempt units requires.
 #'
 #' @examples
 #' rank_score(5, list(name = "Wilcoxon", scale = FALSE))
 #' rank_score(5, list(name = "Stephenson", s = 3, scale = FALSE))
 #' rank_score(5, list(name = "Stephenson", s = 3, divide_by_top = FALSE, scale = FALSE))
 #' rank_score(5, list(name = "Polynomial", r = 2, std = TRUE, scale = FALSE))
+#' rank_score(5, list(name = "TopCount", j = 2))
+#' rank_score(5, list(name = "Ramp", j = 3))
 #'
 #' @export
 rank_score <- function(n, method.list = list(name = "Polynomial", r, std = TRUE, scale = FALSE) ){
+  known = c("Polynomial", "Stephenson", "Wilcoxon", "TopCount", "Ramp")
+  if(is.null(method.list$name) || !(method.list$name %in% known)){
+    stop(sprintf("rank_score() knows the scores %s, not '%s'.",
+                 paste(known, collapse = ", "), as.character(method.list$name)))
+  }
+  if(method.list$name %in% c("TopCount", "Ramp")){
+    j = method.list$j
+    if(is.null(j) || length(j) != 1L || !is.numeric(j) || j != round(j) || j < 1 || j > n){
+      stop(sprintf("%s scores need j, a whole number of top ranks from 1 to n = %d.", method.list$name, n))
+    }
+    if(method.list$name == "TopCount"){
+      score = as.numeric(c(1:n) > n - j)
+    } else {
+      # 0 up to rank n - j, then 1/j, 2/j, ..., 1 at ranks n - j + 1 to n
+      score = pmax(0, (c(1:n) - n + j) / j)
+    }
+    if(isTRUE(method.list$scale)){
+      score = as.numeric(scale(score))
+    }
+  }
   if(method.list$name == "Polynomial"){
     r = method.list$r
     if(isTRUE(method.list$std)) {

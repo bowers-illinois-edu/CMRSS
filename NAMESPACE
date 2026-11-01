@@ -23,8 +23,6 @@ export(solver_available)
 export(sort_treat)
 export(summary_block)
 importFrom(Matrix,sparseMatrix)
-importFrom(stats,
-  uniroot,
-  var
-)
+importFrom(stats,uniroot)
+importFrom(stats,var)
 importFrom(utils,combn)

@@ -1,3 +1,22 @@
+# CMRSS 0.2.23
+
+## Added
+
+- Two rank scores that look at the top j ranks alone, specified like the
+  others by name: `list(name = "TopCount", j = 3)` is 1 at the top three
+  ranks and 0 below, so the rank sum over the treated units is the
+  number of treated units among the top three ranks (hypergeometric under
+  no effect); `list(name = "Ramp", j = 4)` is 0 below rank n - 4 and
+  1/4, 2/4, 3/4, 1 at the top four. Both are nondecreasing, so the worst
+  case over the exempt units and every function that builds scores by
+  name (`null_dist()`, `min_stat()`, `comb_p_val_cre()`, the stratified
+  test) take them without change. Written for the regret study of
+  combined_stephenson_tests (README 8.12 there), which compares them with
+  the polynomial scores at the same scales.
+- `rank_score()` now stops with a message that names the known scores
+  when given a name it does not know, instead of failing on an undefined
+  variable.
+
 # CMRSS 0.2.22
 
 ## Fixed
